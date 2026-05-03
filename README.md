@@ -44,8 +44,8 @@ HOST=0.0.0.0
 # URL onde o seu 9Router está rodando
 AI_ROUTER_URL=http://localhost:20128/v1
 
-DEFAULT_API_KEY=nexus-os
-# Modelo padrão (Pode ser o nome de um Combo configurado no 9Router)
+# Modelo padrão. Deixe "combo" para usar o rodízio do 9Router!
+# (Você pode mudar isso facilmente na aba Configurações pelo site)
 DEFAULT_MODEL=combo
 
 PROJECTS_ROOT=./projects
