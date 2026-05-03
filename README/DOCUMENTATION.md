@@ -37,7 +37,7 @@ As configurações do sistema ficam salvas no arquivo `.env` (que pode ser edita
 | `HOST` | Host de escuta | `0.0.0.0` |
 | `AI_ROUTER_URL` | URL do endpoint do 9Router | `http://localhost:20128/v1` |
 | `PROJECTS_ROOT` | Diretório onde os agentes criarão arquivos | `./projects` |
-| `DEFAULT_MODEL` | Nome da Rota de fallback caso o agente não exija um modelo específico | `nvidia/minimaxai/minimax-m2.7` |
+| `DEFAULT_MODEL` | Nome da Rota de fallback ou Combo configurado no 9Router | `combo` |
 | `DEFAULT_API_KEY` | Chave de passagem (o 9Router gerencia as chaves reais) | `nexus-os` |
 
 ## 📁 Estrutura do Projeto

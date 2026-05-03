@@ -45,8 +45,8 @@ HOST=0.0.0.0
 AI_ROUTER_URL=http://localhost:20128/v1
 
 DEFAULT_API_KEY=nexus-os
-# Modelo padrão (Ex: nvidia/minimaxai/minimax-m2.7, kr/claude-sonnet-4.5)
-DEFAULT_MODEL=nvidia/minimaxai/minimax-m2.7
+# Modelo padrão (Pode ser o nome de um Combo configurado no 9Router)
+DEFAULT_MODEL=combo
 
 PROJECTS_ROOT=./projects
 DB_PATH=./data/nexus.db
