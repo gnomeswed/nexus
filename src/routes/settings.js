@@ -47,12 +47,13 @@ router.get('/', (req, res) => {
   res.json({
     ai_router_url: process.env.AI_ROUTER_URL || env.AI_ROUTER_URL || 'http://localhost:20128/v1',
     projects_root: process.env.PROJECTS_ROOT || env.PROJECTS_ROOT || './projects',
+    default_model: process.env.DEFAULT_MODEL || env.DEFAULT_MODEL || 'combo',
     version: '1.0.0'
   });
 });
 
 router.post('/', (req, res) => {
-  const { ai_router_url, projects_root } = req.body;
+  const { ai_router_url, projects_root, default_model } = req.body;
 
   const updates = {};
   if (ai_router_url) {
@@ -63,6 +64,10 @@ router.post('/', (req, res) => {
     updates.PROJECTS_ROOT = projects_root;
     process.env.PROJECTS_ROOT = projects_root;
     req.app.locals.projectsRoot = path.resolve(projects_root);
+  }
+  if (default_model) {
+    updates.DEFAULT_MODEL = default_model;
+    process.env.DEFAULT_MODEL = default_model;
   }
   if (Object.keys(updates).length > 0) writeEnv(updates);
 

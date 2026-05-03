@@ -29,7 +29,11 @@ Acesse em `http://localhost:3000`.
 
 ## ⚙️ Configuração
 
-As configurações do sistema ficam salvas no arquivo `.env` (que pode ser editado com segurança preservando comentários pelo painel `Configurações` na UI):
+As configurações do sistema ficam salvas no arquivo `.env`, mas **você pode alterá-las facilmente direto pela interface web**, no menu **Configurações**:
+
+- **Modelo Global Padrão**: É aqui que você define o nome do seu Combo do 9Router (ex: `combo`). O Nexus enviará esse nome e o 9Router fará o rodízio inteligente dos modelos gratuitos!
+
+As principais variáveis guardadas no `.env` são:
 
 | Variável | Descrição | Default |
 |----------|-------------|---------|

@@ -19,6 +19,13 @@ const SettingsPage = {
             <label class="form-label">Pasta de Projetos</label>
             <input class="form-input" id="setting-projects" value="${settings.projects_root || ''}" placeholder="Ex: ./projects">
           </div>
+          <div class="form-group">
+            <label class="form-label">Modelo Global Padrão (Ex: combo)</label>
+            <input class="form-input" id="setting-model" value="${settings.default_model || ''}" placeholder="Ex: combo">
+            <small style="color:var(--text-muted);font-size:12px;margin-top:4px;display:block">
+              Deixe "combo" para usar o rodízio grátis do 9Router, ou digite um modelo específico (ex: kr/claude-sonnet-4.5)
+            </small>
+          </div>
           <div style="margin-top: 16px; display: flex; gap: 8px;">
             <button class="btn btn-secondary" onclick="SettingsPage.testConnection()">🔌 Testar Conexão</button>
             <button class="btn btn-primary" onclick="SettingsPage.saveSettings()">Salvar Configurações</button>
@@ -41,9 +48,10 @@ const SettingsPage = {
   async saveSettings() {
     const ai_router_url = document.getElementById('setting-router').value.trim();
     const projects_root = document.getElementById('setting-projects').value.trim();
+    const default_model = document.getElementById('setting-model').value.trim();
 
     try {
-      await API.updateSettings({ ai_router_url, projects_root });
+      await API.updateSettings({ ai_router_url, projects_root, default_model });
       Toast.success('Configurações atualizadas com sucesso!');
     } catch (e) {
       Toast.error('Erro ao atualizar: ' + e.message);
