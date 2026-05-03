@@ -1,8 +1,16 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 
 function initDatabase() {
   const dbPath = path.resolve(process.env.DB_PATH || './data/nexus.db');
+  
+  // Create directory if it doesn't exist
+  const dbDir = path.dirname(dbPath);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+
   const db = new Database(dbPath);
 
   // Performance optimizations for SQLite
