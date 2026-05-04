@@ -276,9 +276,16 @@ const TaskDetailPage = {
       const loading = document.getElementById('ai-loading');
       if (loading) loading.remove();
       Toast.error(e.message);
-    } finally {
-      if (input) { input.disabled = false; input.focus(); }
+      if (input) input.disabled = false;
+      if (input) input.focus();
     }
+  },
+
+  escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   },
 
   deleteTask(id) {

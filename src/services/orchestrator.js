@@ -157,6 +157,12 @@ class Orchestrator {
         this.io.emit('activity:new', savedMsg);
       }
 
+      // Check if summarization is needed (async)
+      const msgCount = this.db.prepare(`SELECT count(*) as c FROM messages WHERE context_type = ? AND context_id = ? AND role IN ('user', 'assistant') AND is_summary = 0 AND archived = 0`).get(contextType, contextId);
+      if (msgCount && msgCount.c > 20) {
+        setTimeout(() => this.summarizeHistory(contextType, contextId).catch(console.error), 100);
+      }
+
       return {
         message: savedMsg,
         actions,
@@ -449,13 +455,90 @@ class Orchestrator {
    * Get conversation history for context
    */
   getConversationHistory(contextType, contextId, limit = 20) {
+    const summaryMsg = this.db.prepare(`
+      SELECT role, content FROM messages
+      WHERE context_type = ? AND context_id = ? AND is_summary = 1 AND archived = 0
+      ORDER BY created_at DESC LIMIT 1
+    `).get(contextType, contextId);
+
     const rows = this.db.prepare(`
       SELECT role, content FROM messages
-      WHERE context_type = ? AND context_id = ? AND role IN ('user', 'assistant')
+      WHERE context_type = ? AND context_id = ? AND role IN ('user', 'assistant') AND is_summary = 0 AND archived = 0
       ORDER BY created_at DESC LIMIT ?
     `).all(contextType, contextId, limit);
 
-    return rows.reverse().map(r => ({ role: r.role, content: r.content }));
+    const history = rows.reverse().map(r => ({ role: r.role, content: r.content }));
+
+    if (summaryMsg) {
+      history.unshift({ role: 'system', content: `[MEMÓRIA DE LONGO PRAZO - RESUMO DO INÍCIO DA CONVERSA]\n${summaryMsg.content}` });
+    }
+
+    return history;
+  }
+
+  /**
+   * Asynchronously summarizes old messages to save tokens
+   */
+  async summarizeHistory(contextType, contextId) {
+    if (this._summarizing && this._summarizing[`${contextType}:${contextId}`]) return;
+    this._summarizing = this._summarizing || {};
+    this._summarizing[`${contextType}:${contextId}`] = true;
+
+    try {
+      const rows = this.db.prepare(`
+        SELECT id, role, content FROM messages
+        WHERE context_type = ? AND context_id = ? AND role IN ('user', 'assistant') AND is_summary = 0 AND archived = 0
+        ORDER BY created_at ASC
+      `).all(contextType, contextId);
+
+      if (rows.length < 15) return; // Not enough to summarize
+
+      // Keep the 5 most recent messages intact, summarize the rest
+      const messagesToArchive = rows.slice(0, rows.length - 5);
+      const idsToArchive = messagesToArchive.map(r => r.id);
+
+      const existingSummary = this.db.prepare(`
+        SELECT content FROM messages
+        WHERE context_type = ? AND context_id = ? AND is_summary = 1 AND archived = 0
+        ORDER BY created_at DESC LIMIT 1
+      `).get(contextType, contextId);
+
+      let prompt = "Sua tarefa é resumir detalhadamente os eventos desta conversa técnica. NÃO OMITA detalhes arquiteturais, regras de negócio, arquivos alterados ou URLs. O resumo deve ser COMPLETO para servir como a memória perfeita do que aconteceu antes.\n\n";
+      if (existingSummary) {
+         prompt += "=== RESUMO ANTERIOR ===\n" + existingSummary.content + "\n\n=== NOVAS MENSAGENS PARA ADICIONAR AO RESUMO ===\n";
+      } else {
+         prompt += "=== MENSAGENS ===\n";
+      }
+
+      messagesToArchive.forEach(m => {
+         // Truncate giant code blocks just in case they slipped through
+         const safeContent = m.content.length > 1000 ? m.content.substring(0, 1000) + '...[truncado]' : m.content;
+         prompt += `[${m.role.toUpperCase()}]: ${safeContent}\n`;
+      });
+
+      const agent = this.findContextAgent(contextType, contextId);
+      if (!agent) return;
+
+      const response = await aiClient.chat(agent, [{ role: 'user', content: prompt }], { enableTools: false });
+      
+      if (response && response.content) {
+         // Insert new summary
+         this.db.prepare(`
+           INSERT INTO messages (context_type, context_id, agent_id, role, content, metadata, is_summary, archived)
+           VALUES (?, ?, ?, 'system', ?, '{}', 1, 0)
+         `).run(contextType, contextId, agent.id, response.content);
+
+         // Archive old summary and old messages
+         this.db.prepare(`UPDATE messages SET archived = 1 WHERE context_type = ? AND context_id = ? AND is_summary = 1 AND content != ?`).run(contextType, contextId, response.content);
+         
+         const placeholders = idsToArchive.map(() => '?').join(',');
+         this.db.prepare(`UPDATE messages SET archived = 1 WHERE id IN (${placeholders})`).run(...idsToArchive);
+      }
+    } catch (e) {
+      console.error("Summarization error:", e.message);
+    } finally {
+      this._summarizing[`${contextType}:${contextId}`] = false;
+    }
   }
 
   /**
