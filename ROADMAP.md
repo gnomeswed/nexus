@@ -3,7 +3,7 @@
 Documento de acompanhamento da evolução, refatorações e próximos passos do Nexus OS.
 
 ## 📌 Status Atual
-- **Versão:** 1.1.0
+- **Versão:** 1.3.0
 - **Stack:** Node.js, Express, SQLite, Vanilla JS/CSS (Glassmorphism).
 - **Integração IA:** Proxy centralizado via **9Router** (`localhost:20128/v1`).
 - **Modelos testados e funcionando:** `nvidia/minimaxai/minimax-m2.7`, `nvidia/z-ai/glm4.7`
@@ -38,14 +38,21 @@ Documento de acompanhamento da evolução, refatorações e próximos passos do 
 - [x] **Feature:** Telemetria em tempo real (`agent:thinking`) com card de Status da Inteligência no UI.
 - [x] **Feature:** Pastas automáticas isoladas para Tarefas Avulsas (`tarefas/task_id`).
 - [x] **Fix:** Tolerância a falhas na conversão JSON para evitar crashes (Unterminated string).
+- [x] **Feature:** Arquitetura Hierárquica: Transição de "Humano-Trabalhador" para "Humano-Gerente-Trabalhadores".
+- [x] **Feature:** Ferramentas de Delegação: `delegate_task` para o Gerente acionar sub-agentes e fluxo de `review_pending`.
+- [x] **Feature:** Otimização Híbrida (Tokens): Configuração global para suportar Ollama local ou 9Router por agente.
+- [x] **Feature:** Auto-Sumarização de Contexto: Resumir histórico periodicamente para economizar tokens.
 
----
-
-## 🚧 Em Andamento (Arquitetura Multi-Agente)
-- [x] **Arquitetura Hierárquica:** Transição de "Humano-Trabalhador" para "Humano-Gerente-Trabalhadores".
-- [x] **Ferramentas de Delegação:** Adicionar `delegate_task` para o Gerente acionar sub-agentes e fluxo de `review_pending`.
-- [x] **Otimização Híbrida (Tokens):** Configuração global para forçar Estagiários a usarem Ollama local (Low-cost/Free) e o Gerente usar o 9Router.
-- [x] **Auto-Sumarização de Contexto:** Limpar e resumir o histórico periodicamente para economizar tokens e evitar crashes em conversas longas.
+### v1.3.0 — Controle de Permissões & Estabilidade (04/05/2026)
+- [x] **Feature:** Modal de edição de tarefas (alterar agente, projeto, prioridade).
+- [x] **Feature:** Monitoramento de erros por agente: badge `❌ N Erros` na lista + seção "Logs de Erros" no detalhe.
+- [x] **Feature:** Atribuição de `agent_id` nas mensagens de erro do orchestrator.
+- [x] **Fix (Critical):** Multiplicação de tarefas — `create_task` e `delegate_task` são **hard-blocked por código** dentro de contexto de task, convertidos automaticamente em `add_subtask`.
+- [x] **Feature:** Metadados de subtask: cada etapa do roadmap salva `created_by` (agente/humano) e `created_at` (timestamp com segundos).
+- [x] **Feature:** Novas permissões granulares: `delegate_tasks` e `manage_subtasks` com categorias visuais (Gerenciamento / Arquivos / Outros).
+- [x] **Feature:** Status da IA resiliente: se a última mensagem é do usuário, a tela exibe "Pensando e processando..." automaticamente ao carregar.
+- [x] **Fix:** Timeout da API reduzido de 10 min para 3 min para feedback mais rápido ao usuário.
+- [x] **Feature:** Documentação completa reescrita com cobertura de API REST, WebSocket, permissões e fluxo de trabalho.
 
 ---
 
