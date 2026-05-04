@@ -158,6 +158,22 @@ class Orchestrator {
         return { success: true, task_id: task.id, message: `Task created: ${args.title}` };
       }
 
+      case 'create_agent': {
+        // Only allow creating agents if explicitly asked in prompt
+        const result = this.db.prepare(`
+          INSERT INTO agents (name, role, system_prompt, provider, model_id, status)
+          VALUES (?, ?, ?, '9router', 'combo', 'active')
+        `).run(args.name, args.role, args.system_prompt);
+        return { success: true, agent_id: result.lastInsertRowid, message: `Agent created successfully: ${args.name}` };
+      }
+
+      case 'update_task_status': {
+        const result = this.db.prepare('UPDATE tasks SET status = ? WHERE id = ?').run(args.status, args.task_id);
+        if (result.changes === 0) return { error: 'Task not found' };
+        if (this.io) this.io.emit('task:updated', { id: args.task_id, status: args.status });
+        return { success: true, message: `Task ${args.task_id} status updated to ${args.status}` };
+      }
+
       default:
         return { error: `Unknown tool: ${toolName}` };
     }
@@ -215,7 +231,8 @@ class Orchestrator {
     system += '\n--- INSTRUCTIONS ---\n';
     system += 'Respond in the same language as the user. Be concise and actionable.\n';
     system += 'When creating files, use the create_file tool. When you need information, use web_search.\n';
-    system += 'You can create tasks to break down work using create_task.\n';
+    system += 'You can break down work using create_task, update task statuses with update_task_status, and hire new agents with create_agent.\n';
+    system += 'CRITICAL RULE FOR APPROVALS: Before using create_agent or changing a task/project to completed, you MUST ask the user for approval first in the chat. DO NOT execute these tools until the user explicitly says "aprovado" or "sim".\n';
     system += 'Current date: ' + new Date().toISOString().split('T')[0] + '\n';
 
     return system;
