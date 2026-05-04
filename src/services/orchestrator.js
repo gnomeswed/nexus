@@ -104,9 +104,21 @@ class Orchestrator {
         for (const toolCall of response.tool_calls) {
           if (this.io) this.io.to(`${contextType}:${contextId}`).emit('agent:thinking', { action: `Executando ferramenta: ${toolCall.function.name}...` });
           
+          let parsedArgs;
+          try {
+            parsedArgs = JSON.parse(toolCall.function.arguments || '{}');
+          } catch (err) {
+            toolResults.push({
+              role: 'tool',
+              tool_call_id: toolCall.id,
+              content: JSON.stringify({ error: `JSON Parse Error: ${err.message}. Please fix your tool arguments formatting.` })
+            });
+            continue;
+          }
+
           const result = await this.executeTool(
             toolCall.function.name,
-            JSON.parse(toolCall.function.arguments || '{}'),
+            parsedArgs,
             agent,
             contextType,
             contextId,
@@ -236,8 +248,8 @@ class Orchestrator {
 
         const result = this.db.prepare('UPDATE tasks SET status = ? WHERE id = ?').run(args.status, targetTaskId);
         if (result.changes === 0) return { error: 'Task not found' };
-        if (this.io) this.io.emit('task:updated', { id: args.task_id, status: args.status });
-        return { success: true, message: `Task ${args.task_id} status updated to ${args.status}` };
+        if (this.io) this.io.emit('task:updated', { id: targetTaskId, status: args.status });
+        return { success: true, message: `Task ${targetTaskId} status updated to ${args.status}` };
       }
 
       case 'add_subtask': {
