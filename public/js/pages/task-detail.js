@@ -40,6 +40,25 @@ const TaskDetailPage = {
         chatArea.innerHTML += `<div class="chat-bubble ${msg.role}"><div class="sender">${senderName}</div>${ProjectDetailPage && ProjectDetailPage.formatMarkdown ? ProjectDetailPage.formatMarkdown(msg.content) : msg.content}${actionsHtml}</div>`;
         chatArea.scrollTop = chatArea.scrollHeight;
       });
+
+      Socket.off('agent:thinking');
+      Socket.on('agent:thinking', (data) => {
+        const chatArea = document.getElementById('task-chat-messages');
+        if (!chatArea) return;
+        
+        let loading = document.getElementById('ai-loading');
+        if (!loading) {
+          chatArea.innerHTML += `<div class="chat-bubble assistant" id="ai-loading" style="opacity:0.8;border-color:var(--accent)"><div class="sender">🤖 Agente Trabalhando...</div><div id="ai-loading-action"></div><div class="typing-dots">● ● ●</div></div>`;
+          loading = document.getElementById('ai-loading');
+        }
+        
+        const actionSpan = document.getElementById('ai-loading-action');
+        if (actionSpan && data.action) {
+           actionSpan.innerHTML = `<span style="font-size:12px;color:var(--text-secondary);display:block;margin:6px 0;font-family:'JetBrains Mono', monospace">⏳ ${data.action}</span>`;
+        }
+        
+        chatArea.scrollTop = chatArea.scrollHeight;
+      });
     }, 100);
 
     return `
@@ -169,7 +188,7 @@ const TaskDetailPage = {
     if (chatArea) {
       // We don't append the user message manually anymore because the server will broadcast it back to us via socket!
       // Just add the loading state.
-      chatArea.innerHTML += `<div class="chat-bubble assistant" id="ai-loading" style="opacity:0.6"><div class="sender">🤖 Pensando...</div>● ● ●</div>`;
+      chatArea.innerHTML += `<div class="chat-bubble assistant" id="ai-loading" style="opacity:0.8;border-color:var(--accent)"><div class="sender">🤖 Agente Trabalhando...</div><div id="ai-loading-action"></div><div class="typing-dots">● ● ●</div></div>`;
       chatArea.scrollTop = chatArea.scrollHeight;
     }
 
