@@ -9,6 +9,38 @@ const TaskDetailPage = {
     const checklist = JSON.parse(task.checklist || '[]');
     const messages = task.messages || [];
 
+    // Join WebSocket room for live chat
+    setTimeout(() => {
+      Socket.joinRoom('task', id);
+      Socket.on('chat:message', (msg) => {
+        const chatArea = document.getElementById('task-chat-messages');
+        if (!chatArea) return; // If we navigated away
+        
+        // Remove empty state and loading if any
+        const emptyState = chatArea.querySelector('.empty-state-text');
+        if (emptyState) emptyState.remove();
+        const loading = document.getElementById('ai-loading');
+        if (loading) loading.remove();
+
+        let actionsHtml = '';
+        if (msg.metadata) {
+          try {
+            const meta = JSON.parse(msg.metadata);
+            if (meta.actions && meta.actions.length > 0) {
+              actionsHtml = '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted)">';
+              meta.actions.forEach(a => { actionsHtml += `<div>🔧 ${a.tool} → ${a.result.success ? '✅' : '❌'}</div>`; });
+              actionsHtml += '</div>';
+            }
+          } catch(e) {}
+        }
+
+        const senderName = msg.role === 'user' ? '👤 Você/Sistema' : (msg.agent_emoji || '🤖') + ' ' + (msg.agent_name || 'Agente');
+        
+        chatArea.innerHTML += `<div class="chat-bubble ${msg.role}"><div class="sender">${senderName}</div>${ProjectDetailPage && ProjectDetailPage.formatMarkdown ? ProjectDetailPage.formatMarkdown(msg.content) : msg.content}${actionsHtml}</div>`;
+        chatArea.scrollTop = chatArea.scrollHeight;
+      });
+    }, 100);
+
     return `
       <div class="page-header">
         <div style="display:flex;align-items:center;gap:14px">
@@ -52,13 +84,27 @@ const TaskDetailPage = {
             <div class="card" style="height:400px;display:flex;flex-direction:column;padding:0;overflow:hidden">
               <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:15px;font-weight:600">💬 Chat da Tarefa</div>
               <div class="chat-messages" id="task-chat-messages">
-                ${messages.length === 0 ? '<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px">Converse com o agente responsável</div>' : ''}
-                ${messages.map(m => `
+                ${messages.length === 0 ? '<div class="empty-state-text" style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px">Converse com o agente responsável</div>' : ''}
+                ${messages.map(m => {
+                  let actionsHtml = '';
+                  if (m.metadata) {
+                    try {
+                      const meta = JSON.parse(m.metadata);
+                      if (meta.actions && meta.actions.length > 0) {
+                        actionsHtml = '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted)">';
+                        meta.actions.forEach(a => { actionsHtml += `<div>🔧 ${a.tool} → ${a.result.success ? '✅' : '❌'}</div>`; });
+                        actionsHtml += '</div>';
+                      }
+                    } catch(e) {}
+                  }
+                  return `
                   <div class="chat-bubble ${m.role}">
-                    <div class="sender">${m.role === 'user' ? '👤 Você' : (m.agent_emoji || '🤖') + ' ' + (m.agent_name || 'Agente')}</div>
-                    ${m.content}
+                    <div class="sender">${m.role === 'user' ? '👤 Você/Sistema' : (m.agent_emoji || '🤖') + ' ' + (m.agent_name || 'Agente')}</div>
+                    ${ProjectDetailPage && ProjectDetailPage.formatMarkdown ? ProjectDetailPage.formatMarkdown(m.content) : m.content}
+                    ${actionsHtml}
                   </div>
-                `).join('')}
+                  `;
+                }).join('')}
               </div>
               <div class="chat-input-area">
                 <input type="text" id="task-chat-input" placeholder="Mensagem..." onkeydown="if(event.key==='Enter')TaskDetailPage.sendChat(${id})">
@@ -91,7 +137,8 @@ const TaskDetailPage = {
 
     const chatArea = document.getElementById('task-chat-messages');
     if (chatArea) {
-      chatArea.innerHTML += `<div class="chat-bubble user"><div class="sender">👤 Você</div>${content}</div>`;
+      // We don't append the user message manually anymore because the server will broadcast it back to us via socket!
+      // Just add the loading state.
       chatArea.innerHTML += `<div class="chat-bubble assistant" id="ai-loading" style="opacity:0.6"><div class="sender">🤖 Pensando...</div>● ● ●</div>`;
       chatArea.scrollTop = chatArea.scrollHeight;
     }
@@ -99,20 +146,14 @@ const TaskDetailPage = {
     if (input) input.disabled = true;
 
     try {
-      const result = await API.sendAIChat('task', taskId, content);
-      const loading = document.getElementById('ai-loading');
-      if (loading) loading.remove();
-
-      if (result.message && chatArea) {
-        let actionsHtml = '';
-        if (result.actions?.length > 0) {
-          actionsHtml = '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted)">';
-          result.actions.forEach(a => { actionsHtml += `<div>🔧 ${a.tool} → ${a.result.success ? '✅' : '❌'}</div>`; });
-          actionsHtml += '</div>';
-        }
-        chatArea.innerHTML += `<div class="chat-bubble assistant"><div class="sender">${result.message.agent_emoji || '🤖'} ${result.message.agent_name || 'Agente'}</div>${ProjectDetailPage.formatMarkdown(result.message.content)}${actionsHtml}</div>`;
-        chatArea.scrollTop = chatArea.scrollHeight;
-      }
+      // The HTTP call still saves the user message and returns the AI message.
+      // But because we added Socket listener, BOTH will be broadcasted and added twice if we aren't careful.
+      // Wait, /api/ai/chat does not broadcast the USER message, only the assistant message via orchestrator?
+      // Actually, orchestrator NOW broadcasts the user message. 
+      // And /api/ai/chat ALSO saves the user message manually (without broadcasting).
+      // So let's just let the socket handle appending. We don't append manually here anymore except the loading state!
+      await API.sendAIChat('task', taskId, content);
+      // The socket listener will remove the loading indicator and append the new messages.
     } catch (e) {
       const loading = document.getElementById('ai-loading');
       if (loading) loading.remove();

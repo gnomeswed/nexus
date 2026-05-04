@@ -65,8 +65,7 @@ app.post('/api/ai/chat', async (req, res) => {
   if (!context_type || !context_id || !message) {
     return res.status(400).json({ error: 'context_type, context_id, and message are required' });
   }
-  db.prepare(`INSERT INTO messages (context_type, context_id, agent_id, role, content) VALUES (?, ?, NULL, 'user', ?)`)
-    .run(context_type, parseInt(context_id), message);
+  // The orchestrator.processMessage now saves and broadcasts the userMessage automatically!
   const result = await orchestrator.processMessage(context_type, parseInt(context_id), message, agent_id || null);
   res.json(result);
 });

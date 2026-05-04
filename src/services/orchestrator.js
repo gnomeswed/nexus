@@ -40,6 +40,16 @@ class Orchestrator {
     // Build system message with context
     const systemMessage = this.buildSystemMessage(agent, contextType, contextId, projectFolder);
 
+    // Save the user message to DB first if it exists
+    let savedUserMsg;
+    if (userMessage) {
+      // Use role 'user' since this simulates the user or system prompting the agent
+      savedUserMsg = this.saveMessage(contextType, contextId, null, 'user', userMessage);
+      if (this.io) {
+        this.io.to(`${contextType}:${contextId}`).emit('chat:message', savedUserMsg);
+      }
+    }
+
     const messages = [
       { role: 'system', content: systemMessage },
       ...history,
