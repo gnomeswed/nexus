@@ -17,6 +17,7 @@ const AgentDetailPage = {
             <div class="subtitle">${agent.role || 'Sem cargo definido'}</div>
           </div>
           <span class="status-badge ${agent.status}" style="margin-left:12px"><span class="dot"></span>${agent.status}</span>
+          ${agent.error_count > 0 ? `<span class="status-badge offline" style="margin-left:8px">❌ ${agent.error_count} Erros</span>` : ''}
         </div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-secondary btn-sm" onclick="AgentDetailPage.testConnection(${agent.id})">🔌 Testar API</button>
@@ -126,6 +127,22 @@ const AgentDetailPage = {
             </div>
           ` : '<div style="color:var(--text-muted);font-size:13px;padding:16px 0;text-align:center">Nenhuma tarefa atribuída a este agente no momento.</div>'}
         </div>
+        ${agent.errors && agent.errors.length > 0 ? `
+          <div class="card" style="margin-top:24px;border-left:4px solid var(--accent-danger)">
+            <h3 style="margin-bottom:16px;font-size:15px;color:var(--accent-danger)">⚠️ Logs de Erros Recentes</h3>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              ${agent.errors.map(err => `
+                <div style="background:rgba(255,107,107,0.1);padding:12px;border-radius:6px;border:1px solid rgba(255,107,107,0.2)">
+                  <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">
+                    <span>Contexto: ${err.context_type} #${err.context_id}</span>
+                    <span style="float:right">${new Date(err.created_at).toLocaleString()}</span>
+                  </div>
+                  <div style="font-size:13px;color:var(--accent-danger);font-family:monospace">${err.content}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
         </div>
       </div>
     `;

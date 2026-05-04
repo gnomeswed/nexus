@@ -4,14 +4,24 @@ const router = express.Router();
 // GET /api/agents - List all agents
 router.get('/', (req, res) => {
   const db = req.app.locals.db;
-  const agents = db.prepare('SELECT * FROM agents ORDER BY created_at DESC').all();
+  const agents = db.prepare(`
+    SELECT a.*, 
+      (SELECT COUNT(*) FROM messages m WHERE m.agent_id = a.id AND m.role = 'system' AND m.content LIKE '❌ Error:%') as error_count 
+    FROM agents a 
+    ORDER BY a.created_at DESC
+  `).all();
   res.json(agents);
 });
 
 // GET /api/agents/:id - Get single agent
 router.get('/:id', (req, res) => {
   const db = req.app.locals.db;
-  const agent = db.prepare('SELECT * FROM agents WHERE id = ?').get(req.params.id);
+  const agent = db.prepare(`
+    SELECT a.*, 
+      (SELECT COUNT(*) FROM messages m WHERE m.agent_id = a.id AND m.role = 'system' AND m.content LIKE '❌ Error:%') as error_count 
+    FROM agents a 
+    WHERE a.id = ?
+  `).get(req.params.id);
   if (!agent) return res.status(404).json({ error: 'Agent not found' });
 
   // Get assigned projects
@@ -27,8 +37,17 @@ router.get('/:id', (req, res) => {
     SELECT * FROM tasks WHERE agent_id = ? ORDER BY created_at DESC
   `).all(req.params.id);
 
+  // Get errors
+  const errors = db.prepare(`
+    SELECT id, context_type, context_id, content, created_at 
+    FROM messages 
+    WHERE agent_id = ? AND role = 'system' AND content LIKE '❌ Error:%'
+    ORDER BY created_at DESC LIMIT 10
+  `).all(req.params.id);
+
   agent.projects = projects;
   agent.tasks = tasks;
+  agent.errors = errors;
   res.json(agent);
 });
 

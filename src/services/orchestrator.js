@@ -170,7 +170,8 @@ class Orchestrator {
         usage: response.usage
       };
     } catch (error) {
-      const errMsg = this.saveMessage(contextType, contextId, null, 'system', `❌ Error: ${error.message}`, {});
+      const errorAgentId = typeof agent !== 'undefined' && agent ? agent.id : null;
+      const errMsg = this.saveMessage(contextType, contextId, errorAgentId, 'system', `❌ Error: ${error.message}`, {});
 
       if (this.io) {
         this.io.to(`${contextType}:${contextId}`).emit('chat:message', errMsg);

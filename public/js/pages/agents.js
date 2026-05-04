@@ -37,6 +37,7 @@ const AgentsPage = {
                 <div class="agent-meta">
                   <span class="agent-tag">${a.provider}</span>
                   <span class="agent-tag">${a.model_id}</span>
+                  ${a.error_count > 0 ? `<span class="agent-tag" style="background:rgba(255,107,107,0.1);color:var(--accent-danger);border-color:rgba(255,107,107,0.2)">❌ ${a.error_count} Erros</span>` : ''}
                 </div>
               </div>
             `).join('')}
