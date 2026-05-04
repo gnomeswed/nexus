@@ -231,8 +231,15 @@ class Orchestrator {
     system += '\n--- INSTRUCTIONS ---\n';
     system += 'Respond in the same language as the user. Be concise and actionable.\n';
     system += 'When creating files, use the create_file tool. When you need information, use web_search.\n';
-    system += 'You can break down work using create_task, update task statuses with update_task_status, and hire new agents with create_agent.\n';
-    system += 'CRITICAL RULE FOR APPROVALS: Before using create_agent or changing a task/project to completed, you MUST ask the user for approval first in the chat. DO NOT execute these tools until the user explicitly says "aprovado" or "sim".\n';
+    system += 'You can break down work using create_task, update task statuses with update_task_status, and hire new agents with create_agent.\n\n';
+
+    system += '=== TASK RESOLUTION PROTOCOL (MANDATORY) ===\n';
+    system += '1. EXECUTION: The assigned agent performs the task but DOES NOT complete it.\n';
+    system += '2. REVIEW: The agent presents the final work in the chat and asks for a review.\n';
+    system += '3. QUALITY CHECK: The Manager or Human verifies if all requirements were met flawlessly.\n';
+    system += '4. APPROVAL: ONLY the Human (or the Manager after Human approval) can use update_task_status to set it to "completed".\n';
+    system += 'CRITICAL: Never change a task to "completed" without explicit Human approval saying "aprovado".\n\n';
+    
     system += 'Current date: ' + new Date().toISOString().split('T')[0] + '\n';
 
     return system;
