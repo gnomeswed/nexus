@@ -17,11 +17,13 @@ const TaskDetailPage = {
         const chatArea = document.getElementById('task-chat-messages');
         if (!chatArea) return; // If we navigated away
         
-        // Remove empty state and loading if any
         const emptyState = chatArea.querySelector('.empty-state-text');
         if (emptyState) emptyState.remove();
-        const loading = document.getElementById('ai-loading');
-        if (loading) loading.remove();
+
+        const liveStatus = document.getElementById('ai-live-status');
+        if (liveStatus) {
+           liveStatus.innerHTML = `<span style="color:var(--success)">✅ Resposta gerada / Aguardando...</span>`;
+        }
 
         let actionsHtml = '';
         if (msg.metadata) {
@@ -43,21 +45,10 @@ const TaskDetailPage = {
 
       Socket.off('agent:thinking');
       Socket.on('agent:thinking', (data) => {
-        const chatArea = document.getElementById('task-chat-messages');
-        if (!chatArea) return;
-        
-        let loading = document.getElementById('ai-loading');
-        if (!loading) {
-          chatArea.innerHTML += `<div class="chat-bubble assistant" id="ai-loading" style="opacity:0.8;border-color:var(--accent)"><div class="sender">🤖 Agente Trabalhando...</div><div id="ai-loading-action"></div><div class="typing-dots">● ● ●</div></div>`;
-          loading = document.getElementById('ai-loading');
+        const liveStatus = document.getElementById('ai-live-status');
+        if (liveStatus && data.action) {
+           liveStatus.innerHTML = `<span class="typing-dots" style="color:var(--accent);font-size:14px;margin-right:8px">● ● ●</span> <span style="color:var(--text)">${data.action}</span>`;
         }
-        
-        const actionSpan = document.getElementById('ai-loading-action');
-        if (actionSpan && data.action) {
-           actionSpan.innerHTML = `<span style="font-size:12px;color:var(--text-secondary);display:block;margin:6px 0;font-family:'JetBrains Mono', monospace">⏳ ${data.action}</span>`;
-        }
-        
-        chatArea.scrollTop = chatArea.scrollHeight;
       });
     }, 100);
 
@@ -114,6 +105,12 @@ const TaskDetailPage = {
             </div>
           </div>
           <div>
+            <div class="card" style="margin-bottom:16px;background:var(--bg-lighter);border-left:4px solid var(--accent)">
+              <div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span>🧠</span> Status da Inteligência</div>
+              <div id="ai-live-status" style="font-family:'JetBrains Mono', monospace;font-size:13px;color:var(--text-muted);display:flex;align-items:center;">
+                Aguardando nova instrução...
+              </div>
+            </div>
             <div class="card" style="height:400px;display:flex;flex-direction:column;padding:0;overflow:hidden">
               <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:15px;font-weight:600">💬 Chat da Tarefa</div>
               <div class="chat-messages" id="task-chat-messages">
@@ -186,10 +183,10 @@ const TaskDetailPage = {
 
     const chatArea = document.getElementById('task-chat-messages');
     if (chatArea) {
-      // We don't append the user message manually anymore because the server will broadcast it back to us via socket!
-      // Just add the loading state.
-      chatArea.innerHTML += `<div class="chat-bubble assistant" id="ai-loading" style="opacity:0.8;border-color:var(--accent)"><div class="sender">🤖 Agente Trabalhando...</div><div id="ai-loading-action"></div><div class="typing-dots">● ● ●</div></div>`;
-      chatArea.scrollTop = chatArea.scrollHeight;
+      const liveStatus = document.getElementById('ai-live-status');
+      if (liveStatus) {
+         liveStatus.innerHTML = `<span class="typing-dots" style="color:var(--accent);font-size:14px;margin-right:8px">● ● ●</span> <span style="color:var(--text)">Iniciando processamento...</span>`;
+      }
     }
 
     if (input) input.disabled = true;
