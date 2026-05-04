@@ -89,8 +89,11 @@ router.post('/', (req, res) => {
 
   // Auto-trigger agent if task is assigned
   if (task.agent_id) {
+    console.log(`[Tasks] New task ${task.id} created with agent ${task.agent_id}. Triggering orchestrator...`);
     setTimeout(() => {
-      orchestrator.processMessage('task', task.id, "Você recebeu uma nova tarefa. Analise a descrição, mude o status para 'in_progress' usando 'update_task_status' e comece o trabalho.", task.agent_id).catch(console.error);
+      orchestrator.processMessage('task', task.id, "Você recebeu uma nova tarefa. Analise a descrição, mude o status para 'in_progress' usando 'update_task_status' e comece o trabalho.", task.agent_id).catch(err => {
+        console.error(`[Orchestrator] Error triggering agent:`, err);
+      });
     }, 1000);
   }
 });

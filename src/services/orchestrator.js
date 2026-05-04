@@ -12,6 +12,7 @@ class Orchestrator {
   init(db, io) {
     this.db = db;
     this.io = io;
+    console.log('[Orchestrator] Initialized with DB and IO');
   }
 
   /**
