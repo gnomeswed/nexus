@@ -108,6 +108,45 @@ class Orchestrator {
             console.error("Failed to parse hallucinated tool call:", e.message);
           }
         }
+        
+        // New Fallback: Catch [call tool_name(key="value")] format
+        if (!response.tool_calls || response.tool_calls.length === 0) {
+          const callRegex = /\[call\s+(\w+)\s*\(([\s\S]*?)\)\]/g;
+          let match;
+          const extractedCalls = [];
+          
+          while ((match = callRegex.exec(response.content)) !== null) {
+            const name = match[1];
+            const rawArgs = match[2];
+            const args = {};
+            
+            // Try to parse args (key="value")
+            const argRegex = /(\w+)\s*=\s*["']([\s\S]*?)["']/g;
+            let argMatch;
+            while ((argMatch = argRegex.exec(rawArgs)) !== null) {
+              args[argMatch[1]] = argMatch[2];
+            }
+            
+            // If no key=value, treat whole content as 'text' or 'query'
+            if (Object.keys(args).length === 0) {
+              if (name === 'add_subtask') args.text = rawArgs.replace(/["']/g, '').trim();
+              if (name === 'web_search') args.query = rawArgs.replace(/["']/g, '').trim();
+              if (name === 'create_file') args.path = rawArgs.replace(/["']/g, '').trim();
+            }
+
+            extractedCalls.push({
+              id: 'call_regex_' + Date.now() + '_' + Math.random(),
+              type: 'function',
+              function: { name, arguments: JSON.stringify(args) }
+            });
+          }
+          
+          if (extractedCalls.length > 0) {
+            response.tool_calls = extractedCalls;
+            // Remove the calls from content to clean the chat
+            response.content = response.content.replace(/\[call\s+[\s\S]*?\]/g, '').trim();
+          }
+        }
 
         if (!response.tool_calls || response.tool_calls.length === 0) break;
 
