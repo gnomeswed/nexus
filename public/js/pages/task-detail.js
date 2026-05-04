@@ -64,7 +64,10 @@ const TaskDetailPage = {
                   <div class="checklist-item ${item.done ? 'done' : ''}" style="position:relative;display:flex;align-items:flex-start;gap:12px;padding:12px 0 12px 20px;transition:opacity 0.2s">
                     <div style="position:absolute;left:-8px;top:15px;width:12px;height:12px;border-radius:50%;background:${item.done ? 'var(--primary)' : 'var(--bg-lighter)'};border:2px solid ${item.done ? 'var(--primary)' : 'var(--border)'};z-index:2;box-shadow:0 0 0 4px var(--bg-light)"></div>
                     <input type="checkbox" ${item.done ? 'checked' : ''} onchange="TaskDetailPage.toggleCheck(${id},${i},this.checked)" style="margin-top:2px;accent-color:var(--primary);cursor:pointer;width:16px;height:16px">
-                    <span style="flex:1;font-size:14px;line-height:1.4;color:${item.done ? 'var(--text-muted)' : 'var(--text)'};text-decoration:${item.done ? 'line-through' : 'none'};transition:all 0.2s">${this.escapeHtml(item.text)}</span>
+                    <div style="flex:1">
+                      <span style="font-size:14px;line-height:1.4;color:${item.done ? 'var(--text-muted)' : 'var(--text)'};text-decoration:${item.done ? 'line-through' : 'none'};transition:all 0.2s;display:block">${this.escapeHtml(item.text)}</span>
+                      ${item.created_at ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;font-family:monospace">Criado por ${item.created_by || 'Desconhecido'} em ${item.created_at}</div>` : ''}
+                    </div>
                   </div>
                 `).join('')}
               </div>
@@ -250,7 +253,17 @@ const TaskDetailPage = {
     try {
       const task = await API.getTask(taskId);
       const checklist = JSON.parse(task.checklist || '[]');
-      checklist.push({ text, done: false });
+      
+      const pad = (n) => n.toString().padStart(2, '0');
+      const now = new Date();
+      const timestamp = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      
+      checklist.push({ 
+        text, 
+        done: false,
+        created_by: '👤 Humano',
+        created_at: timestamp
+      });
       await API.updateTask(taskId, { checklist });
       App.refresh(); // recarrega a tela para mostrar
     } catch (e) { Toast.error(e.message); }

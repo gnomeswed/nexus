@@ -307,7 +307,18 @@ class Orchestrator {
         
         let checklist = [];
         try { checklist = JSON.parse(task.checklist || '[]'); } catch(e) {}
-        checklist.push({ text: args.text, done: false });
+        
+        const pad = (n) => n.toString().padStart(2, '0');
+        const now = new Date();
+        const timestamp = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        const creatorName = agent ? `${agent.avatar_emoji || '🤖'} ${agent.name}` : '👤 Humano';
+
+        checklist.push({ 
+          text: args.text, 
+          done: false,
+          created_by: creatorName,
+          created_at: timestamp
+        });
         
         this.db.prepare('UPDATE tasks SET checklist = ? WHERE id = ?').run(JSON.stringify(checklist), targetTaskId);
         if (this.io) {
@@ -379,9 +390,10 @@ class Orchestrator {
     
     system += '=== IF YOU ARE A MANAGER (Lead Agent) ===\n';
     system += '1. DELEGATION: Your job is to plan, review, and orchestrate. DO NOT write long code yourself.\n';
-    system += '2. USE WORKERS: Use the `delegate_task` tool to create a task and assign it to a Worker Agent (e.g. Estagiário/Dev) with specific instructions.\n';
-    system += '3. REVIEW: When a worker finishes a file, DO NOT ask them to paste the code in the chat. Use `read_file` to review it silently.\n';
-    system += '4. ROADMAP: Keep the project roadmap updated by marking items as completed when the workers deliver quality code.\n\n';
+    system += '2. USE WORKERS: Use the `delegate_task` tool ONLY to create major, separate modules in a Project.\n';
+    system += '3. DO NOT MULTIPLY TASKS: If you are already inside a Task context, DO NOT use `create_task` or `delegate_task` to break down the work. Instead, use `add_subtask` to add steps to the current task\'s checklist/roadmap.\n';
+    system += '4. REVIEW: When a worker finishes a file, DO NOT ask them to paste the code in the chat. Use `read_file` to review it silently.\n';
+    system += '5. ROADMAP: Keep the project roadmap updated by marking items as completed when the workers deliver quality code.\n\n';
 
     system += '=== IF YOU ARE A WORKER (e.g. Dev/Estagiário) ===\n';
     system += '1. EXECUTION: Write code strictly according to the task description. Use `create_file` or `edit_file`.\n';
