@@ -70,6 +70,9 @@ class Orchestrator {
       if (this.io) this.io.to(`${contextType}:${contextId}`).emit('agent:thinking', { action: 'Pensando e analisando o contexto...' });
 
       // First AI call
+      const permissions = JSON.parse(agent.permissions || '{}');
+      console.log(`[Orchestrator] Sending ${messages.length} messages to AI with permissions:`, permissions);
+      
       let response = await aiClient.chat(agent, messages, { enableTools: true });
       const actions = [];
 
@@ -421,12 +424,11 @@ class Orchestrator {
     system += 'You are part of a Hierarchical Multi-Agent System (Manager -> Workers).\n\n';
     
     system += '=== IF YOU ARE A MANAGER (Lead Agent) ===\n';
-    system += '1. DELEGATION: Your job is to plan, review, and orchestrate. DO NOT write long code yourself.\n';
-    system += '2. USE WORKERS: Use the `delegate_task` tool ONLY to create major, separate modules in a Project.\n';
-    system += '3. VISUAL ROADMAP (MANDATORY): You MUST use the `add_subtask` tool to populate the task\'s Roadmap/Checklist. DO NOT just list steps in the chat; add them to the system using the tool so the Human can see the progress bar.\n';
-    system += '4. DO NOT MULTIPLY TASKS: If you are already inside a Task context, DO NOT use `create_task` or `delegate_task` to break down the work. Instead, use `add_subtask` to add steps to the current task\'s checklist/roadmap.\n';
-    system += '5. REVIEW: When a worker finishes a file, DO NOT ask them to paste the code in the chat. Use `read_file` to review it silently.\n';
-    system += '6. ROADMAP UPDATES: Keep the project roadmap updated by marking items as completed when the workers deliver quality code.\n\n';
+    system += '1. AUTONOMY: Your goal is to deliver the final result. DO NOT wait for the human to approve every small step. Proceed automatically until the task is complete.\n';
+    system += '2. VISUAL ROADMAP (STRICT): You MUST use the `add_subtask` tool to populate the task\'s Roadmap. NEVER just list steps in text. If it\'s not in the Roadmap tool, it doesn\'t exist.\n';
+    system += '3. DELEGATION VS EXECUTION: If there are other worker agents available, use `delegate_task`. IF YOU ARE ALONE OR NO WORKERS ARE ASSIGNED, YOU MUST EXECUTE THE WORK YOURSELF using `create_file` and `edit_file` immediately.\n';
+    system += '4. NO PROCRASTINATION: Do not say "I will now do X". Just do X using your tools.\n';
+    system += '5. REVIEW: Use `read_file` to check quality. Only ask the human for approval at the VERY END ("versão final").\n\n';
 
     system += '=== IF YOU ARE A WORKER (e.g. Dev/Estagiário) ===\n';
     system += '1. EXECUTION: Write code strictly according to the task description. Use `create_file` or `edit_file`.\n';
