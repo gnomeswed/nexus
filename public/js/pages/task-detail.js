@@ -65,27 +65,32 @@ const TaskDetailPage = {
       </div>
       <div class="page-body">
         <div class="grid-2">
-          <div>
-            <div class="card" style="margin-bottom:16px">
-              <h3 style="margin-bottom:12px;font-size:15px">📝 Descrição</h3>
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="card">
+              <h3 style="margin-bottom:12px;font-size:15px;display:flex;align-items:center;gap:8px">📝 <span>Descrição do Projeto</span></h3>
               <p style="color:var(--text-secondary);font-size:14px;line-height:1.6">${task.description || 'Sem descrição'}</p>
             </div>
-            <div class="card">
-              <h3 style="margin-bottom:12px;font-size:15px;display:flex;justify-content:space-between;align-items:center">
-                <span>☑️ Subtarefas / Etapas</span>
+            <div class="card" style="display:flex;flex-direction:column;flex:1">
+              <h3 style="margin-bottom:16px;font-size:15px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:12px">
+                <span>🗺️ Roadmap & Entregáveis</span>
+                <span style="font-size:12px;background:var(--bg-lighter);padding:4px 8px;border-radius:12px;color:var(--text-secondary)">
+                  ${checklist.filter(c => c.done).length} / ${checklist.length} concluídos
+                </span>
               </h3>
-              <div id="task-checklist-container">
-                ${checklist.length === 0 ? '<div style="color:var(--text-muted);font-size:13px;padding:8px 0;">Nenhuma etapa definida ainda.</div>' : ''}
+              <div id="task-checklist-container" style="position:relative;padding-left:12px;flex:1">
+                <div style="position:absolute;left:4px;top:8px;bottom:8px;width:2px;background:var(--border);border-radius:2px"></div>
+                ${checklist.length === 0 ? '<div style="color:var(--text-muted);font-size:13px;padding:16px 0 16px 16px;">O roadmap ainda não tem etapas definidas.</div>' : ''}
                 ${checklist.map((item, i) => `
-                  <div class="checklist-item ${item.done ? 'done' : ''}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
-                    <input type="checkbox" ${item.done ? 'checked' : ''} onchange="TaskDetailPage.toggleCheck(${id},${i},this.checked)">
-                    <span style="flex:1">${item.text}</span>
+                  <div class="checklist-item ${item.done ? 'done' : ''}" style="position:relative;display:flex;align-items:flex-start;gap:12px;padding:12px 0 12px 20px;transition:opacity 0.2s">
+                    <div style="position:absolute;left:-8px;top:15px;width:12px;height:12px;border-radius:50%;background:${item.done ? 'var(--primary)' : 'var(--bg-lighter)'};border:2px solid ${item.done ? 'var(--primary)' : 'var(--border)'};z-index:2;box-shadow:0 0 0 4px var(--bg-light)"></div>
+                    <input type="checkbox" ${item.done ? 'checked' : ''} onchange="TaskDetailPage.toggleCheck(${id},${i},this.checked)" style="margin-top:2px;accent-color:var(--primary);cursor:pointer;width:16px;height:16px">
+                    <span style="flex:1;font-size:14px;line-height:1.4;color:${item.done ? 'var(--text-muted)' : 'var(--text)'};text-decoration:${item.done ? 'line-through' : 'none'};transition:all 0.2s">${item.text}</span>
                   </div>
                 `).join('')}
               </div>
-              <div style="display:flex;gap:8px;margin-top:12px">
-                <input type="text" id="new-subtask-input" class="form-input" placeholder="Adicionar etapa manualmente..." onkeydown="if(event.key==='Enter')TaskDetailPage.addSubtask(${id})">
-                <button class="btn btn-secondary btn-sm" onclick="TaskDetailPage.addSubtask(${id})">+</button>
+              <div style="display:flex;gap:8px;margin-top:24px;border-top:1px solid var(--border);padding-top:16px">
+                <input type="text" id="new-subtask-input" class="form-input" style="background:var(--bg-lighter);border-color:transparent" placeholder="Adicionar nova etapa ao roadmap..." onkeydown="if(event.key==='Enter')TaskDetailPage.addSubtask(${id})">
+                <button class="btn btn-primary btn-sm" style="padding:0 16px" onclick="TaskDetailPage.addSubtask(${id})">Adicionar</button>
               </div>
             </div>
           </div>

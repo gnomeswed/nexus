@@ -191,7 +191,13 @@ class Orchestrator {
       }
 
       case 'create_agent': {
-        // Only allow creating agents if explicitly asked in prompt
+        // Enforce Human-in-the-Loop Protocol
+        const lastUserMsgs = this.db.prepare("SELECT content FROM messages WHERE context_type = ? AND context_id = ? AND role = 'user' ORDER BY created_at DESC LIMIT 5").all(contextType, contextId);
+        const isApproved = lastUserMsgs.some(m => m.content.toLowerCase().includes('aprovado') || m.content.toLowerCase().includes('aprovo'));
+        if (!isApproved) {
+          return { error: '❌ AÇÃO BLOQUEADA PELO SISTEMA: Você não pode criar agentes até que o usuário humano digite a palavra "aprovado" no chat. Peça permissão primeiro!' };
+        }
+
         const result = this.db.prepare(`
           INSERT INTO agents (name, role, system_prompt, provider, model_id, status)
           VALUES (?, ?, ?, '9router', 'combo', 'active')
@@ -200,6 +206,15 @@ class Orchestrator {
       }
 
       case 'update_task_status': {
+        if (args.status === 'completed') {
+          // Enforce Human-in-the-Loop Protocol for completion
+          const lastUserMsgs = this.db.prepare("SELECT content FROM messages WHERE context_type = ? AND context_id = ? AND role = 'user' ORDER BY created_at DESC LIMIT 5").all(contextType, contextId);
+          const isApproved = lastUserMsgs.some(m => m.content.toLowerCase().includes('aprovado') || m.content.toLowerCase().includes('aprovo'));
+          if (!isApproved) {
+            return { error: '❌ AÇÃO BLOQUEADA PELO SISTEMA: Você não pode finalizar a tarefa (completed) até que o usuário humano digite a palavra "aprovado" no chat para o seu trabalho final.' };
+          }
+        }
+
         const result = this.db.prepare('UPDATE tasks SET status = ? WHERE id = ?').run(args.status, args.task_id);
         if (result.changes === 0) return { error: 'Task not found' };
         if (this.io) this.io.emit('task:updated', { id: args.task_id, status: args.status });
