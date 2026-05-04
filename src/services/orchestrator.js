@@ -385,9 +385,21 @@ class Orchestrator {
                 const workerName = worker ? worker.name : 'O trabalhador';
                 
                 setTimeout(() => {
-                  // This triggers the manager in the project context
                   this.processMessage('project', taskInfo.project_id, `SISTEMA: ${workerName} finalizou a tarefa "${taskInfo.title}" e ela está aguardando sua revisão. Verifique os arquivos e decida se aprova ou pede ajustes.`, manager.id).catch(console.error);
                 }, 1500);
+             }
+          }
+        }
+
+        // If status is completed, trigger the manager to look for the next task
+        if (args.status === 'completed') {
+          const taskInfo = this.db.prepare('SELECT project_id FROM tasks WHERE id = ?').get(targetTaskId);
+          if (taskInfo && taskInfo.project_id) {
+             const manager = this.findContextAgent('project', taskInfo.project_id);
+             if (manager) {
+                setTimeout(() => {
+                  this.processMessage('project', taskInfo.project_id, `SISTEMA: A tarefa anterior foi concluída. Verifique o Roadmap e inicie a PRÓXIMA tarefa pendente (use delegate_task ou execute você mesmo). Se não houver mais tarefas, avise o usuário que o projeto terminou.`, manager.id).catch(console.error);
+                }, 2000);
              }
           }
         }
@@ -529,7 +541,7 @@ class Orchestrator {
     system += '=== IF YOU ARE A WORKER (e.g. Dev/Estagiário) ===\n';
     system += '1. EXECUTION: Write code strictly according to the task description. Use `create_file` or `edit_file`.\n';
     system += '2. NO CODE IN CHAT: NEVER paste large code blocks in the chat. This bloats the token context.\n';
-    system += '3. COMPLETION: When you finish your work, reply in chat: "Arquivo criado em [caminho]. Aguardando revisão do Gerente."\n';
+    system += '3. COMPLETION: When you finish your work, you MUST use `update_task_status(status="review_pending")` first, then reply in chat: "Arquivo criado em [caminho]. Aguardando revisão do Gerente."\n';
     system += '4. DO NOT COMPLETE TASKS: Only the Human or Manager can use `update_task_status` to "completed".\n\n';
 
     system += '=== TASK RESOLUTION PROTOCOL (MANDATORY) ===\n';

@@ -3,7 +3,7 @@
 Documento de acompanhamento da evolução, refatorações e próximos passos do Nexus OS.
 
 ## 📌 Status Atual
-- **Versão:** 1.3.0
+- **Versão:** 1.3.1
 - **Stack:** Node.js, Express, SQLite, Vanilla JS/CSS (Glassmorphism).
 - **Integração IA:** Proxy centralizado via **9Router** (`localhost:20128/v1`).
 - **Modelos testados e funcionando:** `nvidia/minimaxai/minimax-m2.7`, `nvidia/z-ai/glm4.7`
@@ -57,6 +57,8 @@ Documento de acompanhamento da evolução, refatorações e próximos passos do 
 - [x] **Fix (Database):** Migrations automáticas para colunas de memória (`is_summary`, `archived`) e status `review_pending`.
 - [x] **Feature (Orchestrator):** Filtro inteligente de monólogos (limpeza de parágrafos em inglês) e exemplos few-shot para respostas curtas e precisas em PT-BR.
 - [x] **Fix (UX):** Sumarização automática agora é silenciosa e oculta no chat.
+- [x] **Feature (Orchestrator):** Encadeamento autônomo de tarefas — o Gerente é notificado automaticamente para iniciar a próxima tarefa assim que uma é marcada como concluída.
+- [x] **Feature (Protocolo):** Rigidez no fluxo de trabalho — Trabalhadores agora são obrigados a atualizar o status da tarefa para `review_pending` via ferramenta antes de reportar no chat.
 
 ---
 
