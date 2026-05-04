@@ -258,7 +258,13 @@ const TaskDetailPage = {
 
     try {
       const task = await API.getTask(taskId);
-      const checklist = JSON.parse(task.checklist || '[]');
+      let checklist = [];
+      try {
+        checklist = JSON.parse(task.checklist || '[]');
+        if (!Array.isArray(checklist)) checklist = [];
+      } catch (e) {
+        checklist = [];
+      }
       
       const pad = (n) => n.toString().padStart(2, '0');
       const now = new Date();
@@ -271,9 +277,18 @@ const TaskDetailPage = {
         created_at: timestamp
       });
       await API.updateTask(taskId, { checklist });
-      App.refresh(); // recarrega a tela para mostrar
-    } catch (e) { Toast.error(e.message); }
-    finally { if (input) { input.disabled = false; input.value = ''; input.focus(); } }
+      Toast.success('Subtask adicionada!');
+      App.refresh(); 
+    } catch (e) { 
+      console.error('Error adding subtask:', e);
+      Toast.error(e.message); 
+    } finally { 
+      if (input) { 
+        input.disabled = false; 
+        input.value = ''; 
+        setTimeout(() => input.focus(), 10);
+      } 
+    }
   },
 
   async sendChat(taskId) {
