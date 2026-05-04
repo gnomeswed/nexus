@@ -357,9 +357,33 @@ class Orchestrator {
       }
 
       case 'add_subtask': {
-        if (!permissions.create_tasks) return { error: 'Permission denied: create_tasks. Apenas o Gerente pode criar subtasks. Faça o trabalho e avise que terminou.' };
+        if (!permissions.create_tasks) return { error: 'Permission denied: create_tasks. Apenas o Gerente pode criar subtasks/phases.' };
+        
+        if (contextType === 'project') {
+          const project = this.db.prepare('SELECT roadmap FROM projects WHERE id = ?').get(contextId);
+          if (!project) return { error: 'Project not found' };
+          
+          let roadmap = [];
+          try { roadmap = JSON.parse(project.roadmap || '[]'); } catch(e) {}
+          
+          const pad = (n) => n.toString().padStart(2, '0');
+          const now = new Date();
+          const timestamp = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+          
+          roadmap.push({
+            title: args.text,
+            description: args.description || '',
+            status: 'pending',
+            created_at: timestamp
+          });
+          
+          this.db.prepare('UPDATE projects SET roadmap = ? WHERE id = ?').run(JSON.stringify(roadmap), contextId);
+          if (this.io) this.io.emit('project:updated', { id: contextId, roadmap });
+          return { success: true, message: `Phase "${args.text}" added to project roadmap.` };
+        }
+
         const targetTaskId = args.task_id || (contextType === 'task' ? contextId : null);
-        if (!targetTaskId) return { error: 'No task_id provided and not in a task context' };
+        if (!targetTaskId) return { error: 'No task_id provided and not in a task context. Se estiver em um projeto, não use task_id.' };
 
         const task = this.db.prepare('SELECT checklist FROM tasks WHERE id = ?').get(targetTaskId);
         if (!task) return { error: 'Task not found' };
