@@ -20,6 +20,7 @@ const AgentDetailPage = {
         </div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-secondary btn-sm" onclick="AgentDetailPage.testConnection(${agent.id})">🔌 Testar API</button>
+          <button class="btn btn-primary btn-sm" onclick="AgentDetailPage.save(${agent.id})">💾 Salvar</button>
           <button class="btn btn-danger btn-sm" onclick="AgentDetailPage.deleteAgent(${agent.id})">🗑️</button>
         </div>
       </div>
@@ -125,8 +126,6 @@ const AgentDetailPage = {
             </div>
           ` : '<div style="color:var(--text-muted);font-size:13px;padding:16px 0;text-align:center">Nenhuma tarefa atribuída a este agente no momento.</div>'}
         </div>
-        <div style="margin-top:24px;display:flex;justify-content:flex-end">
-          <button class="btn btn-primary" onclick="AgentDetailPage.save(${agent.id})">💾 Salvar Alterações</button>
         </div>
       </div>
     `;
