@@ -214,6 +214,12 @@ class Orchestrator {
 
       case 'create_task': {
         if (!permissions.create_tasks) return { error: 'Permission denied: create_tasks' };
+        
+        // HARD BLOCK: Inside a task context, force subtask instead
+        if (contextType === 'task') {
+          return this.executeTool('add_subtask', { task_id: contextId, text: args.title + (args.description ? ' — ' + args.description : '') }, agent, contextType, contextId, projectFolder);
+        }
+        
         const projectId = contextType === 'project' ? contextId : null;
         const result = this.db.prepare(`
           INSERT INTO tasks (project_id, agent_id, title, description, priority, status)
@@ -227,6 +233,13 @@ class Orchestrator {
 
       case 'delegate_task': {
         if (!permissions.create_tasks) return { error: 'Permission denied: create_tasks' };
+        
+        // HARD BLOCK: Inside a task context, force subtask instead of creating new tasks
+        if (contextType === 'task') {
+          const subtaskResult = this.executeTool('add_subtask', { task_id: contextId, text: `[Delegado] ${args.title}` + (args.description ? ' — ' + args.description : '') }, agent, contextType, contextId, projectFolder);
+          return { success: true, message: `SISTEMA: delegate_task bloqueado dentro de tarefa. Subtarefa adicionada ao roadmap. Execute o trabalho AQUI usando create_file/edit_file.` };
+        }
+        
         const projectId = contextType === 'project' ? contextId : null;
         
         // Verify if agent_id exists
@@ -244,7 +257,7 @@ class Orchestrator {
 
         // Auto-trigger the worker agent immediately
         setTimeout(() => {
-          this.processMessage('task', taskId, "Você recebeu uma nova tarefa delegada. Analise a descrição, mude o status para 'in_progress' e comece o trabalho. Quando finalizar, avise que terminou.", args.agent_id).catch(console.error);
+          this.processMessage('task', taskId, "Você recebeu uma nova tarefa delegada. Analise a descrição, mude o status para 'in_progress' e comece o trabalho. Use as ferramentas create_file/edit_file diretamente. NÃO delegue para outros agentes. Quando finalizar, avise que terminou.", args.agent_id).catch(console.error);
         }, 1000);
 
         return { success: true, task_id: taskId, message: `Task delegated successfully to agent ${args.agent_id}: ${args.title}` };
