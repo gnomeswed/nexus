@@ -67,14 +67,19 @@ const AgentDetailPage = {
 
               <div class="form-group">
                 <label class="form-label">Provider</label>
-                <select class="form-select" id="ed-provider">
+                <select class="form-select" id="ed-provider" onchange="document.getElementById('endpoint-group').style.display = (this.value === '9router' ? 'none' : 'block')">
                   <option value="9router" ${agent.provider === '9router' || !agent.provider ? 'selected' : ''}>9Router (Configuração Global)</option>
+                  <option value="ollama" ${agent.provider === 'ollama' ? 'selected' : ''}>Ollama (Local - Gratuito)</option>
                   <option value="custom" ${agent.provider === 'custom' ? 'selected' : ''}>Endpoint Customizado (Avançado)</option>
                 </select>
               </div>
+              <div class="form-group" id="endpoint-group" style="display: ${agent.provider && agent.provider !== '9router' ? 'block' : 'none'}">
+                <label class="form-label">API Endpoint URL</label>
+                <input class="form-input" id="ed-endpoint" value="${agent.api_endpoint || ''}" placeholder="Ex: http://localhost:11434/v1">
+              </div>
               <div class="form-group">
-                <label class="form-label">Modelo (Opcional)</label>
-                <input class="form-input" id="ed-model" value="${agent.model_id || ''}" placeholder="Deixe em branco para o 9Router escolher">
+                <label class="form-label">Modelo (Opcional no 9Router, Obrigatório no Ollama)</label>
+                <input class="form-input" id="ed-model" value="${agent.model_id || ''}" placeholder="Ex: llama3">
               </div>
               <div class="form-row">
                 <div class="form-group">
@@ -110,6 +115,7 @@ const AgentDetailPage = {
         avatar_emoji: document.getElementById('ed-emoji').value,
         status: document.getElementById('ed-status').value,
         provider: document.getElementById('ed-provider').value,
+        api_endpoint: document.getElementById('ed-endpoint') ? document.getElementById('ed-endpoint').value : '',
         model_id: document.getElementById('ed-model').value,
         temperature: parseFloat(document.getElementById('ed-temp').value),
         max_tokens: parseInt(document.getElementById('ed-tokens').value),

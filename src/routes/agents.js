@@ -128,8 +128,15 @@ router.post('/:id/test', async (req, res) => {
   if (!agent) return res.status(404).json({ error: 'Agent not found' });
 
   try {
-    const endpoint = agent.api_endpoint || process.env.AI_ROUTER_URL || 'http://localhost:20128/v1';
-    const apiKey = agent.api_key || process.env.DEFAULT_API_KEY || '';
+    let endpoint = agent.api_endpoint || process.env.AI_ROUTER_URL || 'http://localhost:20128/v1';
+    let apiKey = agent.api_key || process.env.DEFAULT_API_KEY || '';
+
+    if (agent.provider === 'ollama') {
+      endpoint = agent.api_endpoint || 'http://localhost:11434/v1';
+      apiKey = 'ollama';
+    } else if (agent.provider === 'custom' && agent.api_endpoint) {
+      endpoint = agent.api_endpoint;
+    }
 
     const response = await fetch(`${endpoint}/chat/completions`, {
       method: 'POST',
@@ -138,7 +145,7 @@ router.post('/:id/test', async (req, res) => {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: agent.model_id || process.env.DEFAULT_MODEL || 'default', // 9Router usa este nome para achar a rota
+        model: agent.model_id || process.env.DEFAULT_MODEL || 'default',
         messages: [{ role: 'user', content: 'Respond with only: OK' }],
         max_tokens: 50,
         stream: false

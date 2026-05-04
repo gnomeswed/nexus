@@ -13,7 +13,16 @@ class AIClient {
    * If agent has a specific route/model configured, we pass it through.
    */
   async chat(agent, messages, options = {}) {
-    const apiKey = agent.api_key || process.env.DEFAULT_API_KEY || 'nexus-os';
+    let apiKey = agent.api_key || process.env.DEFAULT_API_KEY || 'nexus-os';
+    let targetEndpoint = this.endpoint; // Default to 9router
+
+    // Support for direct Ollama or Custom OpenAI connections
+    if (agent.provider === 'ollama') {
+      targetEndpoint = agent.api_endpoint || 'http://localhost:11434/v1';
+      apiKey = 'ollama'; // Ollama doesn't require API keys but accepts dummy ones
+    } else if (agent.provider === 'custom' && agent.api_endpoint) {
+      targetEndpoint = agent.api_endpoint;
+    }
 
     const body = {
       messages,
@@ -39,7 +48,7 @@ class AIClient {
     }
 
     try {
-      const response = await fetch(`${this.endpoint}/chat/completions`, {
+      const response = await fetch(`${targetEndpoint}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
