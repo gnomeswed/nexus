@@ -100,7 +100,32 @@ const AgentDetailPage = {
             </div>
           </div>
         </div>
-        <div style="margin-top:20px;display:flex;justify-content:flex-end">
+        <div class="card" style="margin-top:24px">
+          <h3 style="margin-bottom:16px;font-size:15px">📋 Atividade Recente (Tarefas Atribuídas)</h3>
+          ${agent.tasks && agent.tasks.length > 0 ? `
+            <div class="table-responsive">
+              <table class="table" style="margin:0">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Título da Tarefa</th>
+                    <th>Prioridade</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${agent.tasks.slice(0, 5).map(t => `
+                    <tr onclick="App.navigate('/tasks/${t.id}')" style="cursor:pointer" class="hover-row">
+                      <td style="width:140px"><span class="status-badge ${t.status}"><span class="dot"></span>${t.status}</span></td>
+                      <td><strong style="color:var(--primary-light)">${t.title}</strong><div style="font-size:12px;color:var(--text-muted);margin-top:4px">${t.description ? t.description.substring(0, 60) + '...' : ''}</div></td>
+                      <td style="width:100px"><span class="priority-badge ${t.priority}">${t.priority}</span></td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : '<div style="color:var(--text-muted);font-size:13px;padding:16px 0;text-align:center">Nenhuma tarefa atribuída a este agente no momento.</div>'}
+        </div>
+        <div style="margin-top:24px;display:flex;justify-content:flex-end">
           <button class="btn btn-primary" onclick="AgentDetailPage.save(${agent.id})">💾 Salvar Alterações</button>
         </div>
       </div>

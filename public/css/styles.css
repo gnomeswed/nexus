@@ -850,6 +850,13 @@ html, body {
 .activity-item .text { flex: 1; font-size: 13px; }
 .activity-item .time { font-size: 11px; color: var(--text-muted); }
 
+/* === TABLES === */
+.table { width: 100%; border-collapse: collapse; text-align: left; }
+.table th, .table td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
+.table th { color: var(--text-muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.hover-row { transition: var(--transition); }
+.hover-row:hover { background: var(--bg-glass-hover); }
+
 /* === SCROLLBAR === */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
