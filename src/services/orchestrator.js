@@ -184,6 +184,22 @@ class Orchestrator {
         return { success: true, message: `Task ${args.task_id} status updated to ${args.status}` };
       }
 
+      case 'add_subtask': {
+        const task = this.db.prepare('SELECT checklist FROM tasks WHERE id = ?').get(args.task_id);
+        if (!task) return { error: 'Task not found' };
+        
+        let checklist = [];
+        try { checklist = JSON.parse(task.checklist || '[]'); } catch(e) {}
+        checklist.push({ text: args.text, done: false });
+        
+        this.db.prepare('UPDATE tasks SET checklist = ? WHERE id = ?').run(JSON.stringify(checklist), args.task_id);
+        if (this.io) {
+           const updatedTask = this.db.prepare('SELECT * FROM tasks WHERE id = ?').get(args.task_id);
+           this.io.emit('task:updated', updatedTask);
+        }
+        return { success: true, message: `Subtask added to checklist: ${args.text}` };
+      }
+
       default:
         return { error: `Unknown tool: ${toolName}` };
     }
@@ -241,7 +257,12 @@ class Orchestrator {
     system += '\n--- INSTRUCTIONS ---\n';
     system += 'Respond in the same language as the user. Be concise and actionable.\n';
     system += 'When creating files, use the create_file tool. When you need information, use web_search.\n';
-    system += 'You can break down work using create_task, update task statuses with update_task_status, and hire new agents with create_agent.\n\n';
+    system += 'You can update task statuses with update_task_status, and hire new agents with create_agent.\n\n';
+
+    system += '=== TASK DELEGATION & SUBTASKS ===\n';
+    system += 'When you are inside a Task and need to break it down into smaller steps, DO NOT use create_task. That will pollute the main board.\n';
+    system += 'Instead, you MUST use the add_subtask tool to add steps to the current task\'s internal checklist.\n';
+    system += 'Only use create_task if you are explicitly asked to create a completely new, independent project task.\n\n';
 
     system += '=== TASK RESOLUTION PROTOCOL (MANDATORY) ===\n';
     system += '1. EXECUTION: The assigned agent performs the task but DOES NOT complete it.\n';
