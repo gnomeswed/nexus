@@ -1,57 +1,57 @@
-# Nexus OS
+# Nexus OS - Documentação Oficial
 
-O Nexus OS é um orquestrador de IA projetado para criar, gerenciar e delegar tarefas para múltiplos agentes autônomos. Ele roda localmente ou em uma VPS e utiliza o **9Router** como proxy centralizador, abstraindo a complexidade de gerenciar chaves e provedores de IA (OpenRouter, NVIDIA NIM, DeepSeek, Kiro, etc.).
+O Nexus OS é um orquestrador de IA autônomo projetado para criar, gerenciar e delegar tarefas para múltiplos agentes simultaneamente. Construído em Node.js com SQLite, ele foi projetado para rodar localmente ou em uma VPS.
 
-## 🚀 Quick Start (Iniciando)
+## 🚀 Filosofia de Roteamento (Cérebro x Músculos)
 
+Diferente de sistemas de IA tradicionais engessados, o Nexus OS **não** te prende a um único provedor de API. A hierarquia ideal de agentes no Nexus funciona assim:
+
+1. **Tech Lead (O Cérebro) via 9Router:** Um agente principal com acesso aos melhores modelos do mercado (Claude 3.5, GPT-4o, DeepSeek) usando o 9Router como proxy. O 9Router abstrai a complexidade das chaves de API e garante que o seu gerente tenha alto poder cognitivo.
+2. **Estagiários (Os Músculos) via Ollama Local:** Agentes subordinados configurados para rodar de graça usando modelos locais open-source (como Llama 3) via Ollama. O gerente envia tarefas repetitivas, extração de dados e conversão de textos para os estagiários processarem sem gastar nenhum token da sua franquia paga.
+
+## 🛡️ Segurança: Human-in-the-Loop Protocol
+
+Os agentes do Nexus têm ferramentas poderosas (`create_file`, `edit_file`, `create_agent`). Para evitar que uma Inteligência Artificial crie agentes sem necessidade ou finalize projetos incompletos, o Orchestrator possui uma trava de segurança em nível de código (Backend).
+
+**Regra Estrita:** Um agente **NUNCA** conseguirá criar outro agente ou marcar uma tarefa principal como finalizada (`completed`) a menos que o usuário humano tenha digitado a palavra **"aprovado"** ou **"aprovo"** nas últimas mensagens do chat daquela tarefa. O sistema rejeitará a requisição da IA com uma mensagem de erro até que a aprovação seja detectada.
+
+## 🗺️ Interface Bento & Timeline Roadmap
+
+O front-end do Nexus utiliza a filosofia "Glassmorphism" do ecossistema Vercel. Na tela de tarefas, em vez de listas mortas, os Subtasks são renderizados em um formato **Bento Card** com um **TreeView / Timeline de Roadmap** integrado.
+Isso permite que você crie subtarefas manualmente ou veja a Inteligência Artificial quebrando problemas complexos em nós interativos que se acendem à medida que são concluídos.
+
+## ⚙️ Configurações e Instalação
+
+### Instalação do Backend de IAs
+- **9Router (Obrigatório para Premium):** Execute em sua VPS (`localhost:20128`). Gerencie combos e contas.
+- **Ollama (Opcional para Agentes Gratuitos):** Instale em sua VPS. Configure seus agentes mais simples para usarem o Provider `Ollama` com o endpoint `http://localhost:11434/v1` na página de edição do agente.
+
+### Instalação do Nexus OS
 ```bash
-# 1. Instale as dependências
+git clone https://github.com/gnomeswed/nexus.git
+cd nexus
 npm install
-
-# 2. Inicie o sistema
-npm start
-
-# Para produção com PM2 (Recomendado):
-pm2 start server.js --name "nexus-os"
-pm2 save
+npm start # ou pm2 start server.js --name "nexus-os" para VPS
 ```
 
-Acesse em `http://localhost:3000`.
-
-## ✨ Features Principais
-
-- **Gestão de Agentes**: Crie e edite agentes definindo seu Prompt de Sistema, Cargo e Permissões (Tools).
-- **Roteamento Inteligente (9Router)**: Todo o tráfego LLM aponta para `localhost:20128/v1`. Não há necessidade de colocar API Keys no Nexus OS.
-- **Modelos Variados**: Suporte testado com modelos da NVIDIA (`minimaxai/minimax-m2.7`, `z-ai/glm4.7`) e Kiro (`kr/claude-sonnet-4.5`, etc.).
-- **Projetos e Tarefas**: Organize o trabalho dos agentes através de Projetos e acompanhe via quadro Kanban.
-- **Execução Autônoma e Tools**: O `Orchestrator` em background permite que os agentes pesquisem na web, criem, leiam e editem arquivos dentro do diretório do projeto. Chat via WebSocket totalmente reativo.
-- **Interface Glassmorphism**: Design UI limpo, minimalista e com suporte a Dark/Light Mode inspirado no ecossistema Vercel.
-
-## ⚙️ Configuração
-
-As configurações do sistema ficam salvas no arquivo `.env`, mas **você pode alterá-las facilmente direto pela interface web**, no menu **Configurações**:
-
-- **Modelo Global Padrão**: É aqui que você define o nome do seu Combo do 9Router (ex: `combo`). O Nexus enviará esse nome e o 9Router fará o rodízio inteligente dos modelos gratuitos!
-
-As principais variáveis guardadas no `.env` são:
+As variáveis de ambiente ficam no `.env` (gerado manualmente) ou na página web de "Configurações":
 
 | Variável | Descrição | Default |
 |----------|-------------|---------|
 | `PORT` | Porta HTTP do servidor | `3000` |
-| `HOST` | Host de escuta | `0.0.0.0` |
-| `AI_ROUTER_URL` | URL do endpoint do 9Router | `http://localhost:20128/v1` |
-| `PROJECTS_ROOT` | Diretório onde os agentes criarão arquivos | `./projects` |
-| `DEFAULT_MODEL` | Nome da Rota de fallback ou Combo configurado no 9Router | `combo` |
-| `DEFAULT_API_KEY` | Chave de passagem (o 9Router gerencia as chaves reais) | `nexus-os` |
+| `AI_ROUTER_URL` | URL de fallback do 9Router | `http://localhost:20128/v1` |
+| `PROJECTS_ROOT` | Diretório onde os agentes criam arquivos de código | `./projects` |
+| `DEFAULT_MODEL` | Nome do Combo ou rota primária do 9Router | `combo` |
 
-## 📁 Estrutura do Projeto
+## 📁 Arquitetura de Diretórios
 
-- `data/`: Armazena o banco de dados relacional SQLite (`nexus.db`).
-- `public/`: Frontend em Vanilla JS focado em performance (arquivos `.js` modulares).
-- `src/routes/`: API REST (endpoints para chat, agentes, tarefas, configurações).
-- `src/services/`: Lógica pesada (`ai-client.js`, `orchestrator.js`, `scheduler.js`).
-- `src/websocket/`: Comunicação em tempo real para streaming e logs na UI (`chat-handler.js`).
-- `README/`: Arquivos de documentação (como este).
+- `data/`: Armazena o banco de dados relacional SQLite (`nexus.db`). Gerado automaticamente no primeiro boot.
+- `public/`: Frontend Vanilla JS modular.
+- `src/routes/`: API REST Node.js (Express).
+- `src/services/`: Núcleo de processamento autônomo.
+  - `orchestrator.js`: Executa Tools, aplica o Human-in-the-Loop, intercepta alucinações de LLM e manda a IA refazer tarefas.
+  - `ai-client.js`: Cliente flexível para bater no 9Router ou diretamente em provedores customizados / Ollama.
+- `src/websocket/`: Atualização visual e de chat em tempo real (`chat-handler.js`).
 
 ## 📄 License
 MIT
