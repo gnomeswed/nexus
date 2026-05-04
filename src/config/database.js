@@ -101,6 +101,19 @@ function runMigrations(db) {
       UNIQUE(project_id, agent_id)
     );
 
+    -- Memories table (Long-term learning)
+    CREATE TABLE IF NOT EXISTS memories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      agent_id INTEGER,
+      project_id INTEGER,
+      title TEXT DEFAULT '',
+      content TEXT NOT NULL,
+      category TEXT DEFAULT 'general',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE SET NULL,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+    );
+
     -- Indexes for performance
     CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
     CREATE INDEX IF NOT EXISTS idx_tasks_agent ON tasks(agent_id);
@@ -109,6 +122,7 @@ function runMigrations(db) {
     CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at);
     CREATE INDEX IF NOT EXISTS idx_project_agents_project ON project_agents(project_id);
     CREATE INDEX IF NOT EXISTS idx_project_agents_agent ON project_agents(agent_id);
+    CREATE INDEX IF NOT EXISTS idx_memories_content ON memories(content);
   `);
 
   // Migration: Add is_summary and archived to messages if they don't exist

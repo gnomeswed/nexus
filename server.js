@@ -44,6 +44,7 @@ const db = initDatabase();
 // Initialize orchestrator & scheduler
 orchestrator.init(db, io);
 scheduler.init(db, io);
+scheduler.startHeartbeat(15); // Check every 15 minutes
 
 // Make available to routes
 app.locals.db = db;

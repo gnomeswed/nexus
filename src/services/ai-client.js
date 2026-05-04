@@ -256,6 +256,38 @@ class AIClient {
           }
         }
       });
+
+      tools.push({
+        type: 'function',
+        function: {
+          name: 'save_memory',
+          description: 'Save important knowledge, code snippets, or project lessons to long-term memory.',
+          parameters: {
+            type: 'object',
+            properties: {
+              title: { type: 'string', description: 'Short title for this memory' },
+              content: { type: 'string', description: 'The knowledge or lesson learned to save' },
+              category: { type: 'string', description: 'Category (e.g. "code", "deployment", "bug-fix")' }
+            },
+            required: ['content']
+          }
+        }
+      });
+
+      tools.push({
+        type: 'function',
+        function: {
+          name: 'search_memory',
+          description: 'Search for past knowledge and lessons learned from previous projects.',
+          parameters: {
+            type: 'object',
+            properties: {
+              query: { type: 'string', description: 'Search term to find relevant memories' }
+            },
+            required: ['query']
+          }
+        }
+      });
     }
 
     return tools;

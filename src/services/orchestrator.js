@@ -181,7 +181,9 @@ class Orchestrator {
           toolResults.push({
             role: 'tool',
             tool_call_id: toolCall.id,
-            content: JSON.stringify(result)
+            content: result.error 
+              ? `❌ ERRO NA FERRAMENTA: ${result.error}. Analise o erro, verifique se o caminho do arquivo está correto e tente corrigir usando suas ferramentas novamente. Não desista na primeira tentativa.` 
+              : JSON.stringify(result)
           });
         }
 
@@ -359,12 +361,22 @@ class Orchestrator {
       }
 
       case 'update_task_status': {
+        const targetTaskId = args.task_id || (contextType === 'task' ? contextId : null);
+        if (!targetTaskId) return { error: 'No task_id provided and not in a task context' };
+
         if (args.status === 'completed') {
-          // Enforce Human-in-the-Loop Protocol for completion
-          const lastUserMsgs = this.db.prepare("SELECT content FROM messages WHERE context_type = ? AND context_id = ? AND role = 'user' ORDER BY created_at DESC LIMIT 5").all(contextType, contextId);
-          const isApproved = lastUserMsgs.some(m => m.content.toLowerCase().includes('aprovado') || m.content.toLowerCase().includes('aprovo'));
-          if (!isApproved) {
-            return { error: '❌ AÇÃO BLOQUEADA PELO SISTEMA: Você não pode finalizar a tarefa (completed) até que o usuário humano digite a palavra "aprovado" no chat para o seu trabalho final.' };
+          // Autonomous Approval (Suggestion 5): Bypass human approval for low-risk tasks
+          const task = this.db.prepare('SELECT title, description FROM tasks WHERE id = ?').get(targetTaskId);
+          const lowRiskKeywords = ['pesquisa', 'busca', 'search', 'read', 'leitura', 'format', 'formata', 'clean', 'limpeza', 'analise', 'analyze', 'check', 'verific', 'doc', 'roadmap'];
+          const isLowRisk = task && lowRiskKeywords.some(kw => (task.title + ' ' + task.description).toLowerCase().includes(kw));
+
+          if (!isLowRisk) {
+            // Enforce Human-in-the-Loop Protocol for completion of high-risk tasks
+            const lastUserMsgs = this.db.prepare("SELECT content FROM messages WHERE context_type = ? AND context_id = ? AND role = 'user' ORDER BY created_at DESC LIMIT 5").all(contextType, contextId);
+            const isApproved = lastUserMsgs.some(m => m.content.toLowerCase().includes('aprovado') || m.content.toLowerCase().includes('aprovo'));
+            if (!isApproved) {
+              return { error: '❌ AÇÃO BLOQUEADA PELO SISTEMA: Esta tarefa é estratégica (Código/Arquivos/Delegação). Você não pode finalizá-la até que o usuário humano digite a palavra "aprovado" no chat para o seu trabalho final.' };
+            }
           }
         }
 
@@ -460,6 +472,28 @@ class Orchestrator {
            this.io.emit('task:updated', updatedTask);
         }
         return { success: true, message: `Subtask added to checklist: ${args.text}` };
+      }
+
+      case 'save_memory': {
+        const projectId = contextType === 'project' ? contextId : null;
+        this.db.prepare(`
+          INSERT INTO memories (agent_id, project_id, title, content, category)
+          VALUES (?, ?, ?, ?, ?)
+        `).run(agent.id, projectId, args.title || '', args.content, args.category || 'general');
+        return { success: true, message: 'Conhecimento salvo na memória de longo prazo com sucesso.' };
+      }
+
+      case 'search_memory': {
+        const results = this.db.prepare(`
+          SELECT title, content, category, created_at 
+          FROM memories 
+          WHERE content LIKE ? OR title LIKE ?
+          ORDER BY created_at DESC LIMIT 5
+        `).all(`%${args.query}%`, `%${args.query}%`);
+        
+        if (results.length === 0) return { message: 'Nenhuma memória relevante encontrada para esta busca.' };
+        
+        return { success: true, results };
       }
 
       default:

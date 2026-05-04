@@ -61,14 +61,57 @@ class Scheduler {
   }
 
   /**
-   * List active reminders
+   * Start the autonomous heartbeat (Ping system)
+   * This wakes up the Manager agent periodically to check for pending tasks
    */
-  listReminders() {
-    const list = [];
-    for (const [id, entry] of this.timers) {
-      list.push({ id, title: entry.title, description: entry.description, triggerAt: entry.triggerAt, agentId: entry.agentId });
-    }
-    return list;
+  startHeartbeat(intervalMinutes = 10) {
+    console.log(`[Scheduler] Heartbeat started (Every ${intervalMinutes} minutes)`);
+    
+    setInterval(async () => {
+      if (!this.db || !this.io) return;
+
+      console.log('[Scheduler] Heartbeat: Checking for pending work...');
+      
+      try {
+        // Find projects that have pending or in_progress tasks
+        const activeProjects = this.db.prepare(`
+          SELECT DISTINCT p.id, p.name 
+          FROM projects p
+          JOIN tasks t ON p.id = t.project_id
+          WHERE t.status IN ('pending', 'in_progress')
+          AND p.status != 'completed'
+        `).all();
+
+        for (const project of activeProjects) {
+          const orchestrator = require('./orchestrator');
+          const manager = orchestrator.findContextAgent('project', project.id);
+          
+          if (manager) {
+            // Check if there was any message in the last 10 minutes to avoid spamming
+            const tenMinutesAgo = new Date(Date.now() - intervalMinutes * 60 * 1000).toISOString();
+            const recentMsgs = this.db.prepare(`
+              SELECT count(*) as c FROM messages 
+              WHERE context_type = 'project' AND context_id = ? 
+              AND created_at > ?
+            `).get(project.id, tenMinutesAgo);
+
+            if (recentMsgs.c === 0) {
+              console.log(`[Scheduler] Heartbeat: Pinging Manager for project "${project.name}"`);
+              
+              // We don't await this to avoid blocking the heartbeat loop
+              orchestrator.processMessage(
+                'project', 
+                project.id, 
+                `SISTEMA (Heartbeat): Existem tarefas pendentes ou em andamento no Roadmap deste projeto. Verifique o status das tarefas delegadas e pressione os agentes se necessário, ou continue o trabalho você mesmo.`, 
+                manager.id
+              ).catch(err => console.error(`[Scheduler] Heartbeat error for project ${project.id}:`, err.message));
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[Scheduler] Heartbeat internal error:', err.message);
+      }
+    }, intervalMinutes * 60 * 1000);
   }
 }
 
