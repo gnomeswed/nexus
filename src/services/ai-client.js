@@ -62,7 +62,7 @@ class AIClient {
       }
     }
 
-    try {
+      try {
       const response = await fetch(`${targetEndpoint}/chat/completions`, {
         method: 'POST',
         headers: {
@@ -72,7 +72,7 @@ class AIClient {
           'X-Title': 'Nexus OS'
         },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(600000)
+        signal: AbortSignal.timeout(180000) // 3 minutes timeout
       });
 
       if (!response.ok) {
@@ -90,7 +90,7 @@ class AIClient {
       };
     } catch (error) {
       if (error.name === 'TimeoutError') {
-        throw new Error('AI request timed out after 10 minutes');
+        throw new Error('AI request timed out after 3 minutes');
       }
       throw error;
     }

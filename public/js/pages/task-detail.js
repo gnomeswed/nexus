@@ -9,47 +9,15 @@ const TaskDetailPage = {
     const checklist = JSON.parse(task.checklist || '[]');
     const messages = task.messages || [];
 
-    // Join WebSocket room for live chat
+    const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
+    let isThinking = lastMsg && lastMsg.role === 'user';
+    let initialStatus = isThinking 
+      ? '<span class="typing-dots" style="color:var(--accent);font-size:14px;margin-right:8px">● ● ●</span> <span style="color:var(--text)">Pensando e processando...</span>'
+      : 'Aguardando nova instrução...';
+
+    // Join WebSocket room for live chat using the external method
     setTimeout(() => {
-      Socket.joinRoom('task', id);
-      Socket.off('chat:message'); // Limpa os "ouvidos" antigos para não duplicar
-      Socket.on('chat:message', (msg) => {
-        const chatArea = document.getElementById('task-chat-messages');
-        if (!chatArea) return; // If we navigated away
-        
-        const emptyState = chatArea.querySelector('.empty-state-text');
-        if (emptyState) emptyState.remove();
-
-        const liveStatus = document.getElementById('ai-live-status');
-        if (liveStatus) {
-           liveStatus.innerHTML = `<span style="color:var(--success)">✅ Resposta gerada / Aguardando...</span>`;
-        }
-
-        let actionsHtml = '';
-        if (msg.metadata) {
-          try {
-            const meta = JSON.parse(msg.metadata);
-            if (meta.actions && meta.actions.length > 0) {
-              actionsHtml = '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted)">';
-              meta.actions.forEach(a => { actionsHtml += `<div>🔧 ${a.tool} → ${a.result.success ? '✅' : '❌'}</div>`; });
-              actionsHtml += '</div>';
-            }
-          } catch(e) {}
-        }
-
-        const senderName = msg.role === 'user' ? '👤 Você/Sistema' : (msg.agent_emoji || '🤖') + ' ' + (msg.agent_name || 'Agente');
-        
-        chatArea.innerHTML += `<div class="chat-bubble ${msg.role}"><div class="sender">${senderName}</div>${ProjectDetailPage && ProjectDetailPage.formatMarkdown ? ProjectDetailPage.formatMarkdown(msg.content) : msg.content}${actionsHtml}</div>`;
-        chatArea.scrollTop = chatArea.scrollHeight;
-      });
-
-      Socket.off('agent:thinking');
-      Socket.on('agent:thinking', (data) => {
-        const liveStatus = document.getElementById('ai-live-status');
-        if (liveStatus && data.action) {
-           liveStatus.innerHTML = `<span class="typing-dots" style="color:var(--accent);font-size:14px;margin-right:8px">● ● ●</span> <span style="color:var(--text)">${data.action}</span>`;
-        }
-      });
+      TaskDetailPage.setupSocket(id);
     }, 100);
 
     return `
@@ -57,7 +25,7 @@ const TaskDetailPage = {
         <div style="display:flex;align-items:center;gap:14px">
           <button class="btn btn-secondary btn-icon" onclick="App.navigate('/tasks')">←</button>
           <div>
-            <h1>✅ ${task.title}</h1>
+            <h1>✅ ${this.escapeHtml(task.title)}</h1>
             <div class="subtitle">${task.project_name ? '📁 ' + task.project_name : 'Tarefa avulsa'} · ${task.agent_name ? task.agent_emoji + ' ' + task.agent_name : 'Sem agente'}</div>
           </div>
           <span class="status-badge ${task.status}"><span class="dot"></span>${task.status}</span>
@@ -80,7 +48,7 @@ const TaskDetailPage = {
           <div style="display:flex;flex-direction:column;gap:16px">
             <div class="card">
               <h3 style="margin-bottom:12px;font-size:15px;display:flex;align-items:center;gap:8px">📝 <span>Descrição do Projeto</span></h3>
-              <p style="color:var(--text-secondary);font-size:14px;line-height:1.6">${task.description || 'Sem descrição'}</p>
+              <p style="color:var(--text-secondary);font-size:14px;line-height:1.6">${this.escapeHtml(task.description || 'Sem descrição')}</p>
             </div>
             <div class="card" style="display:flex;flex-direction:column;flex:1">
               <h3 style="margin-bottom:16px;font-size:15px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:12px">
@@ -96,7 +64,7 @@ const TaskDetailPage = {
                   <div class="checklist-item ${item.done ? 'done' : ''}" style="position:relative;display:flex;align-items:flex-start;gap:12px;padding:12px 0 12px 20px;transition:opacity 0.2s">
                     <div style="position:absolute;left:-8px;top:15px;width:12px;height:12px;border-radius:50%;background:${item.done ? 'var(--primary)' : 'var(--bg-lighter)'};border:2px solid ${item.done ? 'var(--primary)' : 'var(--border)'};z-index:2;box-shadow:0 0 0 4px var(--bg-light)"></div>
                     <input type="checkbox" ${item.done ? 'checked' : ''} onchange="TaskDetailPage.toggleCheck(${id},${i},this.checked)" style="margin-top:2px;accent-color:var(--primary);cursor:pointer;width:16px;height:16px">
-                    <span style="flex:1;font-size:14px;line-height:1.4;color:${item.done ? 'var(--text-muted)' : 'var(--text)'};text-decoration:${item.done ? 'line-through' : 'none'};transition:all 0.2s">${item.text}</span>
+                    <span style="flex:1;font-size:14px;line-height:1.4;color:${item.done ? 'var(--text-muted)' : 'var(--text)'};text-decoration:${item.done ? 'line-through' : 'none'};transition:all 0.2s">${this.escapeHtml(item.text)}</span>
                   </div>
                 `).join('')}
               </div>
@@ -110,7 +78,7 @@ const TaskDetailPage = {
             <div class="card" style="margin-bottom:16px;background:var(--bg-lighter);border-left:4px solid var(--accent)">
               <div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span>🧠</span> Status da Inteligência</div>
               <div id="ai-live-status" style="font-family:'JetBrains Mono', monospace;font-size:13px;color:var(--text-muted);display:flex;align-items:center;">
-                Aguardando nova instrução...
+                ${initialStatus}
               </div>
             </div>
             <div class="card" style="height:400px;display:flex;flex-direction:column;padding:0;overflow:hidden">
@@ -147,6 +115,48 @@ const TaskDetailPage = {
         </div>
       </div>
     `;
+  },
+
+  setupSocket(taskId) {
+    Socket.joinRoom('task', taskId);
+    Socket.off('chat:message');
+    Socket.on('chat:message', (msg) => {
+      const chatArea = document.getElementById('task-chat-messages');
+      if (!chatArea) return;
+      
+      const emptyState = chatArea.querySelector('.empty-state-text');
+      if (emptyState) emptyState.remove();
+
+      const liveStatus = document.getElementById('ai-live-status');
+      if (liveStatus) {
+         liveStatus.innerHTML = `<span style="color:var(--success)">✅ Resposta gerada / Aguardando...</span>`;
+      }
+
+      let actionsHtml = '';
+      if (msg.metadata) {
+        try {
+          const meta = JSON.parse(msg.metadata);
+          if (meta.actions && meta.actions.length > 0) {
+            actionsHtml = '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted)">';
+            meta.actions.forEach(a => { actionsHtml += `<div>🔧 ${a.tool} → ${a.result.success ? '✅' : '❌'}</div>`; });
+            actionsHtml += '</div>';
+          }
+        } catch(e) {}
+      }
+
+      const senderName = msg.role === 'user' ? '👤 Você/Sistema' : (msg.agent_emoji || '🤖') + ' ' + (msg.agent_name || 'Agente');
+      
+      chatArea.innerHTML += `<div class="chat-bubble ${msg.role}"><div class="sender">${senderName}</div>${ProjectDetailPage && ProjectDetailPage.formatMarkdown ? ProjectDetailPage.formatMarkdown(msg.content) : msg.content}${actionsHtml}</div>`;
+      chatArea.scrollTop = chatArea.scrollHeight;
+    });
+
+    Socket.off('agent:thinking');
+    Socket.on('agent:thinking', (data) => {
+      const liveStatus = document.getElementById('ai-live-status');
+      if (liveStatus && data.action) {
+         liveStatus.innerHTML = `<span class="typing-dots" style="color:var(--accent);font-size:14px;margin-right:8px">● ● ●</span> <span style="color:var(--text)">${data.action}</span>`;
+      }
+    });
   },
 
   async updateStatus(id, status) {
