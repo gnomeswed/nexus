@@ -154,7 +154,7 @@ class AIClient {
         type: 'function',
         function: {
           name: 'create_task',
-          description: 'Create a new task for tracking work',
+          description: 'Create a new independent task for tracking work. DO NOT use this for subtasks.',
           parameters: {
             type: 'object',
             properties: {
@@ -163,6 +163,55 @@ class AIClient {
               priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] }
             },
             required: ['title']
+          }
+        }
+      });
+      
+      tools.push({
+        type: 'function',
+        function: {
+          name: 'add_subtask',
+          description: 'Add a subtask step to the current task\'s checklist.',
+          parameters: {
+            type: 'object',
+            properties: {
+              task_id: { type: 'integer', description: 'ID of the current task' },
+              text: { type: 'string', description: 'Description of the subtask/step' }
+            },
+            required: ['task_id', 'text']
+          }
+        }
+      });
+      
+      tools.push({
+        type: 'function',
+        function: {
+          name: 'update_task_status',
+          description: 'Update the status of a task.',
+          parameters: {
+            type: 'object',
+            properties: {
+              task_id: { type: 'integer', description: 'ID of the task to update' },
+              status: { type: 'string', enum: ['pending', 'in_progress', 'completed', 'cancelled'] }
+            },
+            required: ['task_id', 'status']
+          }
+        }
+      });
+      
+      tools.push({
+        type: 'function',
+        function: {
+          name: 'create_agent',
+          description: 'Hire and create a new agent in the system.',
+          parameters: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Name of the agent' },
+              role: { type: 'string', description: 'Role of the agent' },
+              system_prompt: { type: 'string', description: 'System prompt and instructions for the new agent' }
+            },
+            required: ['name', 'role', 'system_prompt']
           }
         }
       });
