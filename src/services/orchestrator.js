@@ -423,9 +423,10 @@ class Orchestrator {
     system += '=== IF YOU ARE A MANAGER (Lead Agent) ===\n';
     system += '1. DELEGATION: Your job is to plan, review, and orchestrate. DO NOT write long code yourself.\n';
     system += '2. USE WORKERS: Use the `delegate_task` tool ONLY to create major, separate modules in a Project.\n';
-    system += '3. DO NOT MULTIPLY TASKS: If you are already inside a Task context, DO NOT use `create_task` or `delegate_task` to break down the work. Instead, use `add_subtask` to add steps to the current task\'s checklist/roadmap.\n';
-    system += '4. REVIEW: When a worker finishes a file, DO NOT ask them to paste the code in the chat. Use `read_file` to review it silently.\n';
-    system += '5. ROADMAP: Keep the project roadmap updated by marking items as completed when the workers deliver quality code.\n\n';
+    system += '3. VISUAL ROADMAP (MANDATORY): You MUST use the `add_subtask` tool to populate the task\'s Roadmap/Checklist. DO NOT just list steps in the chat; add them to the system using the tool so the Human can see the progress bar.\n';
+    system += '4. DO NOT MULTIPLY TASKS: If you are already inside a Task context, DO NOT use `create_task` or `delegate_task` to break down the work. Instead, use `add_subtask` to add steps to the current task\'s checklist/roadmap.\n';
+    system += '5. REVIEW: When a worker finishes a file, DO NOT ask them to paste the code in the chat. Use `read_file` to review it silently.\n';
+    system += '6. ROADMAP UPDATES: Keep the project roadmap updated by marking items as completed when the workers deliver quality code.\n\n';
 
     system += '=== IF YOU ARE A WORKER (e.g. Dev/Estagiário) ===\n';
     system += '1. EXECUTION: Write code strictly according to the task description. Use `create_file` or `edit_file`.\n';
