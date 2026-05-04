@@ -199,10 +199,10 @@ class AIClient {
           parameters: {
             type: 'object',
             properties: {
-              task_id: { type: 'integer', description: 'ID of the current task' },
+              task_id: { type: 'integer', description: 'ID of the current task (optional, inferred if not provided)' },
               text: { type: 'string', description: 'Description of the subtask/step' }
             },
-            required: ['task_id', 'text']
+            required: ['text']
           }
         }
       });
@@ -215,10 +215,10 @@ class AIClient {
           parameters: {
             type: 'object',
             properties: {
-              task_id: { type: 'integer', description: 'ID of the task to update' },
+              task_id: { type: 'integer', description: 'ID of the task to update (optional)' },
               status: { type: 'string', enum: ['pending', 'in_progress', 'completed', 'cancelled'] }
             },
-            required: ['task_id', 'status']
+            required: ['status']
           }
         }
       });

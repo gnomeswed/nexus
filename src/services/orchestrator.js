@@ -225,23 +225,29 @@ class Orchestrator {
           }
         }
 
-        const result = this.db.prepare('UPDATE tasks SET status = ? WHERE id = ?').run(args.status, args.task_id);
+        const targetTaskId = args.task_id || (contextType === 'task' ? contextId : null);
+        if (!targetTaskId) return { error: 'No task_id provided and not in a task context' };
+
+        const result = this.db.prepare('UPDATE tasks SET status = ? WHERE id = ?').run(args.status, targetTaskId);
         if (result.changes === 0) return { error: 'Task not found' };
         if (this.io) this.io.emit('task:updated', { id: args.task_id, status: args.status });
         return { success: true, message: `Task ${args.task_id} status updated to ${args.status}` };
       }
 
       case 'add_subtask': {
-        const task = this.db.prepare('SELECT checklist FROM tasks WHERE id = ?').get(args.task_id);
+        const targetTaskId = args.task_id || (contextType === 'task' ? contextId : null);
+        if (!targetTaskId) return { error: 'No task_id provided and not in a task context' };
+
+        const task = this.db.prepare('SELECT checklist FROM tasks WHERE id = ?').get(targetTaskId);
         if (!task) return { error: 'Task not found' };
         
         let checklist = [];
         try { checklist = JSON.parse(task.checklist || '[]'); } catch(e) {}
         checklist.push({ text: args.text, done: false });
         
-        this.db.prepare('UPDATE tasks SET checklist = ? WHERE id = ?').run(JSON.stringify(checklist), args.task_id);
+        this.db.prepare('UPDATE tasks SET checklist = ? WHERE id = ?').run(JSON.stringify(checklist), targetTaskId);
         if (this.io) {
-           const updatedTask = this.db.prepare('SELECT * FROM tasks WHERE id = ?').get(args.task_id);
+           const updatedTask = this.db.prepare('SELECT * FROM tasks WHERE id = ?').get(targetTaskId);
            this.io.emit('task:updated', updatedTask);
         }
         return { success: true, message: `Subtask added to checklist: ${args.text}` };
@@ -296,7 +302,7 @@ class Orchestrator {
     } else if (contextType === 'task') {
       const task = this.db.prepare('SELECT t.*, p.name as project_name, p.folder_path FROM tasks t LEFT JOIN projects p ON t.project_id = p.id WHERE t.id = ?').get(contextId);
       if (task) {
-        system += `Task: ${task.title}\nDescription: ${task.description}\nStatus: ${task.status}\nPriority: ${task.priority}\n`;
+        system += `Task ID: ${task.id}\nTask: ${task.title}\nDescription: ${task.description}\nStatus: ${task.status}\nPriority: ${task.priority}\n`;
         if (task.project_name) system += `Project: ${task.project_name}\n`;
       }
     }
