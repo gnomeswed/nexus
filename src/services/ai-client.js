@@ -42,9 +42,24 @@ class AIClient {
     // Add tool definitions if agent has permissions
     const permissions = JSON.parse(agent.permissions || '{}');
     const tools = this.buildTools(permissions);
+    
     if (tools.length > 0 && options.enableTools !== false) {
-      body.tools = tools;
-      body.tool_choice = 'auto';
+      if (agent.provider === 'ollama') {
+        // Many Ollama models (like gemma2:2b) reject native 'tools' array.
+        // We inject them as text into the system prompt and let our fallback parser catch them!
+        let toolsText = '\n\n=== AVAILABLE TOOLS ===\nYou have the following tools available. To use a tool, you MUST reply with a JSON block in the exact format: {"name": "tool_name", "arguments": {"arg1": "value"}}\n\n';
+        tools.forEach(t => {
+          toolsText += `- ${t.function.name}: ${t.function.description}\n  Arguments: ${JSON.stringify(t.function.parameters.properties)}\n`;
+        });
+        
+        // Find system message and append
+        const sysMsg = body.messages.find(m => m.role === 'system');
+        if (sysMsg) sysMsg.content += toolsText;
+      } else {
+        // Native tool calling for 9Router/OpenAI
+        body.tools = tools;
+        body.tool_choice = 'auto';
+      }
     }
 
     try {
