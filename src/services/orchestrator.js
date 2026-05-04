@@ -66,21 +66,31 @@ class Orchestrator {
       while (iterations < 5) {
         // Fallback: If the model writes the tool call as raw JSON in the text content instead of using the API's tool_calls array
         if (!response.tool_calls || response.tool_calls.length === 0) {
-          const jsonMatch = response.content.match(/\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{.*?\})\s*\}/s);
-          if (jsonMatch) {
-            try {
-              const parsed = JSON.parse(jsonMatch[0]);
-              response.tool_calls = [{
-                id: 'call_fallback_' + Date.now(),
-                type: 'function',
-                function: {
-                  name: parsed.name,
-                  arguments: typeof parsed.arguments === 'string' ? parsed.arguments : JSON.stringify(parsed.arguments)
-                }
-              }];
-            } catch (e) {
-              console.error("Failed to parse hallucinated tool call:", e);
+          try {
+            let jsonStr = '';
+            const mdMatch = response.content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+            if (mdMatch) {
+              jsonStr = mdMatch[1];
+            } else {
+              const rawMatch = response.content.match(/\{[\s\S]*"name"[\s\S]*"arguments"[\s\S]*\}/);
+              if (rawMatch) jsonStr = rawMatch[0];
             }
+            
+            if (jsonStr) {
+              const parsed = JSON.parse(jsonStr);
+              if (parsed.name && parsed.arguments) {
+                response.tool_calls = [{
+                  id: 'call_fallback_' + Date.now(),
+                  type: 'function',
+                  function: {
+                    name: parsed.name,
+                    arguments: typeof parsed.arguments === 'string' ? parsed.arguments : JSON.stringify(parsed.arguments)
+                  }
+                }];
+              }
+            }
+          } catch (e) {
+            console.error("Failed to parse hallucinated tool call:", e.message);
           }
         }
 
