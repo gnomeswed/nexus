@@ -70,16 +70,24 @@ const TaskDetailPage = {
               <h3 style="margin-bottom:12px;font-size:15px">📝 Descrição</h3>
               <p style="color:var(--text-secondary);font-size:14px;line-height:1.6">${task.description || 'Sem descrição'}</p>
             </div>
-            ${checklist.length ? `
             <div class="card">
-              <h3 style="margin-bottom:12px;font-size:15px">☑️ Checklist</h3>
-              ${checklist.map((item, i) => `
-                <div class="checklist-item ${item.done ? 'done' : ''}">
-                  <input type="checkbox" ${item.done ? 'checked' : ''} onchange="TaskDetailPage.toggleCheck(${id},${i},this.checked)">
-                  <span>${item.text}</span>
-                </div>
-              `).join('')}
-            </div>` : ''}
+              <h3 style="margin-bottom:12px;font-size:15px;display:flex;justify-content:space-between;align-items:center">
+                <span>☑️ Subtarefas / Etapas</span>
+              </h3>
+              <div id="task-checklist-container">
+                ${checklist.length === 0 ? '<div style="color:var(--text-muted);font-size:13px;padding:8px 0;">Nenhuma etapa definida ainda.</div>' : ''}
+                ${checklist.map((item, i) => `
+                  <div class="checklist-item ${item.done ? 'done' : ''}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+                    <input type="checkbox" ${item.done ? 'checked' : ''} onchange="TaskDetailPage.toggleCheck(${id},${i},this.checked)">
+                    <span style="flex:1">${item.text}</span>
+                  </div>
+                `).join('')}
+              </div>
+              <div style="display:flex;gap:8px;margin-top:12px">
+                <input type="text" id="new-subtask-input" class="form-input" placeholder="Adicionar etapa manualmente..." onkeydown="if(event.key==='Enter')TaskDetailPage.addSubtask(${id})">
+                <button class="btn btn-secondary btn-sm" onclick="TaskDetailPage.addSubtask(${id})">+</button>
+              </div>
+            </div>
           </div>
           <div>
             <div class="card" style="height:400px;display:flex;flex-direction:column;padding:0;overflow:hidden">
@@ -126,8 +134,24 @@ const TaskDetailPage = {
     try {
       const task = await API.getTask(taskId);
       const checklist = JSON.parse(task.checklist || '[]');
-      if (checklist[idx]) { checklist[idx].done = checked; await API.updateTask(taskId, { checklist }); }
+      if (checklist[idx]) { checklist[idx].done = checked; await API.updateTask(taskId, { checklist }); App.refresh(); }
     } catch (e) { Toast.error(e.message); }
+  },
+
+  async addSubtask(taskId) {
+    const input = document.getElementById('new-subtask-input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.disabled = true;
+
+    try {
+      const task = await API.getTask(taskId);
+      const checklist = JSON.parse(task.checklist || '[]');
+      checklist.push({ text, done: false });
+      await API.updateTask(taskId, { checklist });
+      App.refresh(); // recarrega a tela para mostrar
+    } catch (e) { Toast.error(e.message); }
+    finally { if (input) { input.disabled = false; input.value = ''; input.focus(); } }
   },
 
   async sendChat(taskId) {
