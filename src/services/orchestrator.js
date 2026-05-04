@@ -157,8 +157,14 @@ class Orchestrator {
         response = await aiClient.chat(agent, messages, { enableTools: true });
       }
 
+      // Filter out internal thinking/monologue if the model outputs it
+      let cleanContent = response.content || '';
+      cleanContent = cleanContent.replace(/<thought>[\s\S]*?<\/thought>/gi, '').trim();
+      // Also remove common "Thinking:" or "Thought:" prefixes if they appear at the start
+      cleanContent = cleanContent.replace(/^(Thought|Thinking|Raciocínio):\s*/i, '').trim();
+
       // Save AI response as message
-      const savedMsg = this.saveMessage(contextType, contextId, agent.id, 'assistant', response.content, { actions, model: response.model, usage: response.usage });
+      const savedMsg = this.saveMessage(contextType, contextId, agent.id, 'assistant', cleanContent, { actions, model: response.model, usage: response.usage });
 
       // Emit via WebSocket
       if (this.io) {
@@ -409,7 +415,9 @@ class Orchestrator {
     }
 
     system += '\n--- MULTI-AGENT ORCHESTRATION PROTOCOL ---\n';
-    system += 'Respond in the same language as the user. Be concise and actionable.\n';
+    system += 'LANGUAGE: Respond EXCLUSIVELY in Portuguese (pt-BR). This is mandatory.\n';
+    system += 'NO MONOLOGUE: Do not output your internal thinking, reasoning, or "Thought" blocks in the chat. Output only the final response.\n';
+    system += 'Be concise, professional, and actionable.\n';
     system += 'You are part of a Hierarchical Multi-Agent System (Manager -> Workers).\n\n';
     
     system += '=== IF YOU ARE A MANAGER (Lead Agent) ===\n';
