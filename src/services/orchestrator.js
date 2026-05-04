@@ -336,15 +336,19 @@ class Orchestrator {
         if (result.changes === 0) return { error: 'Task not found' };
         if (this.io) this.io.emit('task:updated', { id: targetTaskId, status: args.status });
 
-        // If status is review_pending, notify the project manager
+        // If status is review_pending, notify the project manager in the project chat
         if (args.status === 'review_pending') {
-          const taskInfo = this.db.prepare('SELECT project_id, title FROM tasks WHERE id = ?').get(targetTaskId);
+          const taskInfo = this.db.prepare('SELECT project_id, title, agent_id FROM tasks WHERE id = ?').get(targetTaskId);
           if (taskInfo && taskInfo.project_id) {
              const manager = this.findContextAgent('project', taskInfo.project_id);
              if (manager) {
+                const worker = this.db.prepare('SELECT name FROM agents WHERE id = ?').get(taskInfo.agent_id);
+                const workerName = worker ? worker.name : 'O trabalhador';
+                
                 setTimeout(() => {
-                  this.processMessage('project', taskInfo.project_id, `A tarefa subordinada "${taskInfo.title}" (ID: ${targetTaskId}) foi concluída pelo trabalhador e está aguardando revisão. Use read_file para verificar os arquivos e, se estiver tudo certo, atualize o status da tarefa para completed. Se não, explique o que deve ser refeito e mude para in_progress.`, manager.id).catch(console.error);
-                }, 1000);
+                  // This triggers the manager in the project context
+                  this.processMessage('project', taskInfo.project_id, `SISTEMA: ${workerName} finalizou a tarefa "${taskInfo.title}" e ela está aguardando sua revisão. Verifique os arquivos e decida se aprova ou pede ajustes.`, manager.id).catch(console.error);
+                }, 1500);
              }
           }
         }
