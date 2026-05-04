@@ -51,29 +51,35 @@ const TaskDetailPage = {
               <p style="color:var(--text-secondary);font-size:14px;line-height:1.6">${this.escapeHtml(task.description || 'Sem descrição')}</p>
             </div>
             <div class="card" style="display:flex;flex-direction:column;flex:1">
-              <h3 style="margin-bottom:16px;font-size:15px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:12px">
-                <span>🗺️ Roadmap & Entregáveis</span>
-                <span style="font-size:12px;background:var(--bg-lighter);padding:4px 8px;border-radius:12px;color:var(--text-secondary)">
+              <h3 style="margin-bottom:0;font-size:15px;display:flex;justify-content:space-between;align-items:center;padding-bottom:12px">
+                <span>📋 Subtasks & Roadmap</span>
+                <span style="font-size:12px;background:var(--bg-lighter);padding:4px 10px;border-radius:12px;color:var(--text-secondary)">
                   ${checklist.filter(c => c.done).length} / ${checklist.length} concluídos
                 </span>
               </h3>
-              <div id="task-checklist-container" style="position:relative;padding-left:12px;flex:1">
-                <div style="position:absolute;left:4px;top:8px;bottom:8px;width:2px;background:var(--border);border-radius:2px"></div>
-                ${checklist.length === 0 ? '<div style="color:var(--text-muted);font-size:13px;padding:16px 0 16px 16px;">O roadmap ainda não tem etapas definidas.</div>' : ''}
+              ${checklist.length > 0 ? `
+                <div style="width:100%;height:6px;background:var(--bg-lighter);border-radius:4px;margin-bottom:16px;overflow:hidden">
+                  <div style="height:100%;width:${checklist.length > 0 ? Math.round((checklist.filter(c=>c.done).length / checklist.length) * 100) : 0}%;background:linear-gradient(90deg, var(--primary), var(--accent));border-radius:4px;transition:width 0.4s ease"></div>
+                </div>
+              ` : ''}
+              <div id="task-checklist-container" style="position:relative;padding-left:14px;flex:1;border-left:2px solid var(--border);margin-left:6px">
+                ${checklist.length === 0 ? '<div style="color:var(--text-muted);font-size:13px;padding:20px 0 20px 16px;text-align:center">Nenhuma subtask criada ainda.<br><span style="font-size:12px;opacity:0.7">Use o campo abaixo ou peça ao Gerente via chat.</span></div>' : ''}
                 ${checklist.map((item, i) => `
-                  <div class="checklist-item ${item.done ? 'done' : ''}" style="position:relative;display:flex;align-items:flex-start;gap:12px;padding:12px 0 12px 20px;transition:opacity 0.2s">
-                    <div style="position:absolute;left:-8px;top:15px;width:12px;height:12px;border-radius:50%;background:${item.done ? 'var(--primary)' : 'var(--bg-lighter)'};border:2px solid ${item.done ? 'var(--primary)' : 'var(--border)'};z-index:2;box-shadow:0 0 0 4px var(--bg-light)"></div>
-                    <input type="checkbox" ${item.done ? 'checked' : ''} onchange="TaskDetailPage.toggleCheck(${id},${i},this.checked)" style="margin-top:2px;accent-color:var(--primary);cursor:pointer;width:16px;height:16px">
-                    <div style="flex:1">
-                      <span style="font-size:14px;line-height:1.4;color:${item.done ? 'var(--text-muted)' : 'var(--text)'};text-decoration:${item.done ? 'line-through' : 'none'};transition:all 0.2s;display:block">${this.escapeHtml(item.text)}</span>
-                      ${item.created_at ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;font-family:monospace">Criado por ${item.created_by || 'Desconhecido'} em ${item.created_at}</div>` : ''}
+                  <div class="checklist-item ${item.done ? 'done' : ''}" style="position:relative;display:flex;align-items:flex-start;gap:10px;padding:10px 0 10px 18px;transition:all 0.2s;border-bottom:1px solid rgba(255,255,255,0.03)">
+                    <div style="position:absolute;left:-7px;top:14px;width:12px;height:12px;border-radius:50%;background:${item.done ? 'var(--success, #22c55e)' : 'var(--bg-light)'};border:2px solid ${item.done ? 'var(--success, #22c55e)' : 'var(--border)'};z-index:2;transition:all 0.3s;display:flex;align-items:center;justify-content:center">
+                      ${item.done ? '<span style="font-size:7px;color:#fff">✓</span>' : ''}
+                    </div>
+                    <input type="checkbox" ${item.done ? 'checked' : ''} onchange="TaskDetailPage.toggleCheck(${id},${i},this.checked)" style="margin-top:3px;accent-color:var(--primary);cursor:pointer;width:15px;height:15px;flex-shrink:0">
+                    <div style="flex:1;min-width:0">
+                      <span style="font-size:13px;line-height:1.5;color:${item.done ? 'var(--text-muted)' : 'var(--text)'};text-decoration:${item.done ? 'line-through' : 'none'};transition:all 0.2s;display:block">${this.escapeHtml(item.text)}</span>
+                      ${item.created_at ? `<div style="font-size:10px;color:var(--text-muted);margin-top:3px;opacity:0.7">${item.created_by || '?'} · ${item.created_at}</div>` : ''}
                     </div>
                   </div>
                 `).join('')}
               </div>
-              <div style="display:flex;gap:8px;margin-top:24px;border-top:1px solid var(--border);padding-top:16px">
-                <input type="text" id="new-subtask-input" class="form-input" style="background:var(--bg-lighter);border-color:transparent" placeholder="Adicionar nova etapa ao roadmap..." onkeydown="if(event.key==='Enter')TaskDetailPage.addSubtask(${id})">
-                <button class="btn btn-primary btn-sm" style="padding:0 16px" onclick="TaskDetailPage.addSubtask(${id})">Adicionar</button>
+              <div style="display:flex;gap:8px;margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
+                <input type="text" id="new-subtask-input" class="form-input" style="background:var(--bg-lighter);border-color:transparent;font-size:13px" placeholder="+ Nova subtask..." onkeydown="if(event.key==='Enter')TaskDetailPage.addSubtask(${id})">
+                <button class="btn btn-primary btn-sm" style="padding:0 16px;white-space:nowrap" onclick="TaskDetailPage.addSubtask(${id})">Adicionar</button>
               </div>
             </div>
           </div>
