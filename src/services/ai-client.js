@@ -72,7 +72,7 @@ class AIClient {
           'X-Title': 'Nexus OS'
         },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(120000)
+        signal: AbortSignal.timeout(600000)
       });
 
       if (!response.ok) {
@@ -90,7 +90,7 @@ class AIClient {
       };
     } catch (error) {
       if (error.name === 'TimeoutError') {
-        throw new Error('AI request timed out after 120s');
+        throw new Error('AI request timed out after 10 minutes');
       }
       throw error;
     }
