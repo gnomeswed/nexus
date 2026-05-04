@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const orchestrator = require('../services/orchestrator');
 
 // GET /api/tasks - List all tasks (with optional filters)
 router.get('/', (req, res) => {
@@ -85,6 +86,13 @@ router.post('/', (req, res) => {
 
   req.app.locals.io.emit('task:created', task);
   res.status(201).json(task);
+
+  // Auto-trigger agent if task is assigned
+  if (task.agent_id) {
+    setTimeout(() => {
+      orchestrator.processMessage('task', task.id, "Você recebeu uma nova tarefa. Analise a descrição, mude o status para 'in_progress' usando 'update_task_status' e comece o trabalho.", task.agent_id).catch(console.error);
+    }, 1000);
+  }
 });
 
 // PUT /api/tasks/:id - Update task
@@ -129,6 +137,13 @@ router.put('/:id', (req, res) => {
 
   req.app.locals.io.emit('task:updated', task);
   res.json(task);
+
+  // Auto-trigger agent if status was changed to in_progress manually
+  if (status === 'in_progress' && existing.status !== 'in_progress' && task.agent_id) {
+    setTimeout(() => {
+      orchestrator.processMessage('task', task.id, "A tarefa foi movida para In Progress. Por favor, leia a descrição e comece o trabalho agora.", task.agent_id).catch(console.error);
+    }, 1000);
+  }
 });
 
 // DELETE /api/tasks/:id
