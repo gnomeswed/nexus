@@ -232,7 +232,7 @@ class Orchestrator {
       }
 
       case 'delegate_task': {
-        if (!permissions.create_tasks) return { error: 'Permission denied: create_tasks' };
+        if (!permissions.delegate_tasks) return { error: 'Permission denied: delegate_tasks. Este agente não tem permissão para delegar tarefas. Faça o trabalho usando create_file/edit_file.' };
         
         // HARD BLOCK: Inside a task context, force subtask instead of creating new tasks
         if (contextType === 'task') {
@@ -312,6 +312,7 @@ class Orchestrator {
       }
 
       case 'add_subtask': {
+        if (!permissions.manage_subtasks) return { error: 'Permission denied: manage_subtasks. Apenas o Gerente pode criar subtasks. Faça o trabalho e avise que terminou.' };
         const targetTaskId = args.task_id || (contextType === 'task' ? contextId : null);
         if (!targetTaskId) return { error: 'No task_id provided and not in a task context' };
 

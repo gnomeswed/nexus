@@ -55,12 +55,23 @@ const AgentDetailPage = {
             </div>
             <div class="card">
               <h3 style="margin-bottom:16px;font-size:15px">🔒 Permissões</h3>
-              <div class="form-check"><input type="checkbox" id="perm-file_create" ${perms.file_create ? 'checked' : ''}><label for="perm-file_create">Criar Arquivos</label></div>
-              <div class="form-check"><input type="checkbox" id="perm-file_edit" ${perms.file_edit ? 'checked' : ''}><label for="perm-file_edit">Editar Arquivos</label></div>
-              <div class="form-check"><input type="checkbox" id="perm-web_search" ${perms.web_search ? 'checked' : ''}><label for="perm-web_search">Pesquisa Web</label></div>
-              <div class="form-check"><input type="checkbox" id="perm-create_tasks" ${perms.create_tasks ? 'checked' : ''}><label for="perm-create_tasks">Criar Tarefas</label></div>
-              <div class="form-check"><input type="checkbox" id="perm-read_files" ${perms.read_files ? 'checked' : ''}><label for="perm-read_files">Ler Arquivos</label></div>
-              <div class="form-check"><input type="checkbox" id="perm-execute_commands" ${perms.execute_commands ? 'checked' : ''}><label for="perm-execute_commands">Executar Comandos</label></div>
+              <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+                <div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🏗️ Gerenciamento</div>
+                <div class="form-check"><input type="checkbox" id="perm-delegate_tasks" ${perms.delegate_tasks ? 'checked' : ''}><label for="perm-delegate_tasks">Delegar Tarefas (criar tarefas para outros agentes)</label></div>
+                <div class="form-check"><input type="checkbox" id="perm-manage_subtasks" ${perms.manage_subtasks ? 'checked' : ''}><label for="perm-manage_subtasks">Gerenciar Subtasks (criar/editar etapas do roadmap)</label></div>
+                <div class="form-check"><input type="checkbox" id="perm-create_tasks" ${perms.create_tasks ? 'checked' : ''}><label for="perm-create_tasks">Criar Tarefas (em projetos)</label></div>
+              </div>
+              <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+                <div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📁 Arquivos</div>
+                <div class="form-check"><input type="checkbox" id="perm-file_create" ${perms.file_create ? 'checked' : ''}><label for="perm-file_create">Criar Arquivos</label></div>
+                <div class="form-check"><input type="checkbox" id="perm-file_edit" ${perms.file_edit ? 'checked' : ''}><label for="perm-file_edit">Editar Arquivos</label></div>
+                <div class="form-check"><input type="checkbox" id="perm-read_files" ${perms.read_files ? 'checked' : ''}><label for="perm-read_files">Ler Arquivos</label></div>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⚡ Outros</div>
+                <div class="form-check"><input type="checkbox" id="perm-web_search" ${perms.web_search ? 'checked' : ''}><label for="perm-web_search">Pesquisa Web</label></div>
+                <div class="form-check"><input type="checkbox" id="perm-execute_commands" ${perms.execute_commands ? 'checked' : ''}><label for="perm-execute_commands">Executar Comandos</label></div>
+              </div>
             </div>
           </div>
           <div>
@@ -162,11 +173,13 @@ const AgentDetailPage = {
         max_tokens: parseInt(document.getElementById('ed-tokens').value),
         system_prompt: document.getElementById('ed-prompt').value,
         permissions: JSON.stringify({
+          delegate_tasks: document.getElementById('perm-delegate_tasks').checked,
+          manage_subtasks: document.getElementById('perm-manage_subtasks').checked,
+          create_tasks: document.getElementById('perm-create_tasks').checked,
           file_create: document.getElementById('perm-file_create').checked,
           file_edit: document.getElementById('perm-file_edit').checked,
-          web_search: document.getElementById('perm-web_search').checked,
-          create_tasks: document.getElementById('perm-create_tasks').checked,
           read_files: document.getElementById('perm-read_files').checked,
+          web_search: document.getElementById('perm-web_search').checked,
           execute_commands: document.getElementById('perm-execute_commands').checked
         })
       });
