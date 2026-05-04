@@ -71,12 +71,12 @@ class Orchestrator {
 
       // First AI call
       const permissions = JSON.parse(agent.permissions || '{}');
-      console.log(`[Orchestrator] Sending ${messages.length} messages to AI with permissions:`, permissions);
+      console.log(`[Orchestrator] Requesting AI (ID: ${agent.id}) in ${contextType}:${contextId}`);
       
       let response = await aiClient.chat(agent, messages, { enableTools: true });
+      console.log(`[Orchestrator] AI Raw Response:`, response.tool_calls ? `Tool Calls: ${response.tool_calls.length}` : 'Text Response');
+      
       const actions = [];
-
-      // Handle tool calls (up to 5 iterations)
       let iterations = 0;
       while (iterations < 5) {
         // Fallback: If the model writes the tool call as raw JSON in the text content instead of using the API's tool_calls array
