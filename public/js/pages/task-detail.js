@@ -71,6 +71,7 @@ const TaskDetailPage = {
             <option value="completed" ${task.status === 'completed' ? 'selected' : ''}>Completed</option>
             <option value="cancelled" ${task.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
           </select>
+          <button class="btn btn-secondary btn-sm" onclick="TaskDetailPage.editTask(${id})">⚙️ Editar</button>
           <button class="btn btn-danger btn-sm" onclick="TaskDetailPage.deleteTask(${id})">🗑️</button>
         </div>
       </div>
@@ -150,6 +151,76 @@ const TaskDetailPage = {
 
   async updateStatus(id, status) {
     try { await API.updateTask(id, { status }); Toast.success('Status atualizado'); } catch (e) { Toast.error(e.message); }
+  },
+
+  async editTask(id) {
+    try {
+      const task = await API.getTask(id);
+      const agents = await API.getAgents();
+      const projects = await API.getProjects();
+
+      Modal.show(`
+        <div class="modal-header"><h2>⚙️ Editar Tarefa</h2><button class="modal-close" onclick="Modal.close()">×</button></div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Título</label>
+            <input class="form-input" id="edit-task-title" value="${this.escapeHtml(task.title)}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Descrição</label>
+            <textarea class="form-textarea" id="edit-task-desc" rows="3">${this.escapeHtml(task.description || '')}</textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Projeto</label>
+              <select class="form-select" id="edit-task-project">
+                <option value="">Tarefa avulsa</option>
+                ${projects.map(p => `<option value="${p.id}" ${task.project_id === p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Agente Responsável</label>
+              <select class="form-select" id="edit-task-agent">
+                <option value="">Sem agente</option>
+                ${agents.map(a => `<option value="${a.id}" ${task.agent_id === a.id ? 'selected' : ''}>${a.avatar_emoji} ${a.name}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Prioridade</label>
+              <select class="form-select" id="edit-task-priority">
+                <option value="low" ${task.priority === 'low' ? 'selected' : ''}>Low</option>
+                <option value="medium" ${task.priority === 'medium' ? 'selected' : ''}>Medium</option>
+                <option value="high" ${task.priority === 'high' ? 'selected' : ''}>High</option>
+                <option value="urgent" ${task.priority === 'urgent' ? 'selected' : ''}>Urgent</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="Modal.close()">Cancelar</button>
+          <button class="btn btn-primary" onclick="TaskDetailPage.saveEdit(${id})">Salvar Mudanças</button>
+        </div>
+      `);
+    } catch (e) { Toast.error(e.message); }
+  },
+
+  async saveEdit(id) {
+    const title = document.getElementById('edit-task-title').value.trim();
+    if (!title) return Toast.error('Título é obrigatório');
+    try {
+      await API.updateTask(id, {
+        title,
+        description: document.getElementById('edit-task-desc').value,
+        project_id: document.getElementById('edit-task-project').value || null,
+        agent_id: document.getElementById('edit-task-agent').value || null,
+        priority: document.getElementById('edit-task-priority').value
+      });
+      Modal.close();
+      Toast.success('Tarefa atualizada!');
+      App.refresh();
+    } catch (e) { Toast.error(e.message); }
   },
 
   async toggleCheck(taskId, idx, checked) {
