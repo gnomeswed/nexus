@@ -84,6 +84,8 @@ function runMigrations(db) {
       role TEXT NOT NULL CHECK(role IN ('user','assistant','system')),
       content TEXT NOT NULL,
       metadata TEXT DEFAULT '{}',
+      is_summary INTEGER DEFAULT 0,
+      archived INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE SET NULL
     );
@@ -108,6 +110,18 @@ function runMigrations(db) {
     CREATE INDEX IF NOT EXISTS idx_project_agents_project ON project_agents(project_id);
     CREATE INDEX IF NOT EXISTS idx_project_agents_agent ON project_agents(agent_id);
   `);
+
+  // Migration: Add is_summary and archived to messages if they don't exist
+  try {
+    db.prepare("ALTER TABLE messages ADD COLUMN is_summary INTEGER DEFAULT 0").run();
+  } catch (e) {
+    // Column already exists
+  }
+  try {
+    db.prepare("ALTER TABLE messages ADD COLUMN archived INTEGER DEFAULT 0").run();
+  } catch (e) {
+    // Column already exists
+  }
 }
 
 module.exports = { initDatabase };
