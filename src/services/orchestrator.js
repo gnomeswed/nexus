@@ -57,6 +57,8 @@ class Orchestrator {
     ];
 
     try {
+      if (this.io) this.io.to(`${contextType}:${contextId}`).emit('agent:thinking', { action: 'Pensando e analisando o contexto...' });
+
       // First AI call
       let response = await aiClient.chat(agent, messages, { enableTools: true });
       const actions = [];
@@ -100,6 +102,8 @@ class Orchestrator {
         const toolResults = [];
 
         for (const toolCall of response.tool_calls) {
+          if (this.io) this.io.to(`${contextType}:${contextId}`).emit('agent:thinking', { action: `Executando ferramenta: ${toolCall.function.name}...` });
+          
           const result = await this.executeTool(
             toolCall.function.name,
             JSON.parse(toolCall.function.arguments || '{}'),
@@ -124,6 +128,8 @@ class Orchestrator {
           tool_calls: response.tool_calls
         });
         messages.push(...toolResults);
+
+        if (this.io) this.io.to(`${contextType}:${contextId}`).emit('agent:thinking', { action: 'Lendo resultado das ferramentas e gerando resposta...' });
 
         // Get next response
         response = await aiClient.chat(agent, messages, { enableTools: true });
@@ -276,6 +282,8 @@ class Orchestrator {
             const files = fileManager.listFiles(projectFolder);
             if (files.length > 0) {
               system += '\nProject files:\n' + files.map(f => `  ${f.type === 'directory' ? '📂' : '📄'} ${f.path}`).join('\n') + '\n';
+            } else {
+              system += `\nYour workspace directory (${projectFolder}) is currently empty. You can create files here.\n`;
             }
           } catch (e) { /* ignore */ }
         }
@@ -367,10 +375,14 @@ class Orchestrator {
       const p = this.db.prepare('SELECT folder_path FROM projects WHERE id = ?').get(contextId);
       return p?.folder_path || null;
     } else if (contextType === 'task') {
-      const t = this.db.prepare('SELECT project_id FROM tasks WHERE id = ?').get(contextId);
+      const t = this.db.prepare('SELECT id, project_id, title FROM tasks WHERE id = ?').get(contextId);
       if (t?.project_id) {
         const p = this.db.prepare('SELECT folder_path FROM projects WHERE id = ?').get(t.project_id);
         return p?.folder_path || null;
+      } else if (t) {
+        // Tarefa avulsa: retorna um subdiretório exclusivo "tarefas/task_..."
+        const cleanTitle = t.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+        return `tarefas/task_${t.id}_${cleanTitle.substring(0, 20)}`;
       }
     }
     return null;
