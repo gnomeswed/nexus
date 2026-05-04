@@ -18,18 +18,27 @@ class Orchestrator {
    * Process a user message in a context (project or task), get AI response
    */
   async processMessage(contextType, contextId, userMessage, agentId = null) {
+    if (!this.db) {
+      console.error('[Orchestrator] Database not initialized!');
+      return { error: 'Database not initialized' };
+    }
+
     // Find the agent to respond
     let agent;
     if (agentId) {
       agent = this.db.prepare('SELECT * FROM agents WHERE id = ?').get(agentId);
+      if (!agent) console.warn(`[Orchestrator] Agent ID ${agentId} not found in DB.`);
     } else {
       // Find agents assigned to this context
       agent = this.findContextAgent(contextType, contextId);
+      if (!agent) console.warn(`[Orchestrator] No agent assigned to ${contextType} ${contextId}.`);
     }
 
     if (!agent) {
       return { error: 'No agent available for this context' };
     }
+
+    console.log(`[Orchestrator] Processing message for ${agent.name} (ID: ${agent.id}) in ${contextType} ${contextId}`);
 
     // Get project folder for file operations
     const projectFolder = this.getProjectFolder(contextType, contextId);

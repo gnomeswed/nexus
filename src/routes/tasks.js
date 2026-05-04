@@ -138,10 +138,16 @@ router.put('/:id', (req, res) => {
   req.app.locals.io.emit('task:updated', task);
   res.json(task);
 
-  // Auto-trigger agent if status was changed to in_progress manually
-  if (status === 'in_progress' && existing.status !== 'in_progress' && task.agent_id) {
+  // Auto-trigger agent if status was changed to in_progress or a new agent was assigned
+  const agentAssigned = agent_id && agent_id != existing.agent_id;
+  const statusChangedToInProgress = status === 'in_progress' && existing.status !== 'in_progress';
+
+  if ((agentAssigned || statusChangedToInProgress) && task.agent_id) {
     setTimeout(() => {
-      orchestrator.processMessage('task', task.id, "A tarefa foi movida para In Progress. Por favor, leia a descrição e comece o trabalho agora.", task.agent_id).catch(console.error);
+      console.log(`[Orchestrator] Auto-triggering agent ${task.agent_id} for task ${task.id}`);
+      orchestrator.processMessage('task', task.id, "A tarefa foi atualizada/atribuída a você. Por favor, analise os detalhes e comece o trabalho.", task.agent_id).catch(err => {
+        console.error(`[Orchestrator] Error triggering agent:`, err);
+      });
     }, 1000);
   }
 });
