@@ -42,9 +42,9 @@ Documento de acompanhamento da evolução, refatorações e próximos passos do 
 ---
 
 ## 🚧 Em Andamento (Arquitetura Multi-Agente)
-- [ ] **Arquitetura Hierárquica:** Transição de "Humano-Trabalhador" para "Humano-Gerente-Trabalhadores".
-- [ ] **Ferramentas de Delegação:** Adicionar `delegate_task` para o Gerente acionar sub-agentes.
-- [ ] **Otimização Híbrida (Tokens):** Configuração global para forçar Estagiários a usarem Ollama local (Low-cost/Free) e o Gerente usar o 9Router.
+- [x] **Arquitetura Hierárquica:** Transição de "Humano-Trabalhador" para "Humano-Gerente-Trabalhadores".
+- [x] **Ferramentas de Delegação:** Adicionar `delegate_task` para o Gerente acionar sub-agentes e fluxo de `review_pending`.
+- [x] **Otimização Híbrida (Tokens):** Configuração global para forçar Estagiários a usarem Ollama local (Low-cost/Free) e o Gerente usar o 9Router.
 - [ ] **Auto-Sumarização de Contexto:** Limpar e resumir o histórico periodicamente para economizar tokens e evitar crashes em conversas longas.
 
 ---
