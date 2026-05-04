@@ -53,6 +53,10 @@ Documento de acompanhamento da evolução, refatorações e próximos passos do 
 - [x] **Feature:** Status da IA resiliente: se a última mensagem é do usuário, a tela exibe "Pensando e processando..." automaticamente ao carregar.
 - [x] **Fix:** Timeout da API reduzido de 10 min para 3 min para feedback mais rápido ao usuário.
 - [x] **Feature:** Documentação completa reescrita com cobertura de API REST, WebSocket, permissões e fluxo de trabalho.
+- [x] **Fix (Architecture):** Unificação de diretórios na VPS (`/root/nexus-os`) e correção de caminhos de arquivos.
+- [x] **Fix (Database):** Migrations automáticas para colunas de memória (`is_summary`, `archived`) e status `review_pending`.
+- [x] **Feature (Orchestrator):** Filtro inteligente de monólogos (limpeza de parágrafos em inglês) e exemplos few-shot para respostas curtas e precisas em PT-BR.
+- [x] **Fix (UX):** Sumarização automática agora é silenciosa e oculta no chat.
 
 ---
 

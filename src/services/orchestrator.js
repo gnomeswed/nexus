@@ -580,7 +580,7 @@ class Orchestrator {
         ORDER BY created_at DESC LIMIT 1
       `).get(contextType, contextId);
 
-      let prompt = "Sua tarefa é resumir detalhadamente os eventos desta conversa técnica. NÃO OMITA detalhes arquiteturais, regras de negócio, arquivos alterados ou URLs. O resumo deve ser COMPLETO para servir como a memória perfeita do que aconteceu antes.\n\n";
+      let prompt = "Sua tarefa é resumir detalhadamente os eventos desta conversa técnica. Responda APENAS com o resumo, sem introduções ou monólogos em inglês. Foque em: decisões tomadas, arquivos criados e status das tarefas.\n\n";
       if (existingSummary) {
          prompt += "=== RESUMO ANTERIOR ===\n" + existingSummary.content + "\n\n=== NOVAS MENSAGENS PARA ADICIONAR AO RESUMO ===\n";
       } else {
