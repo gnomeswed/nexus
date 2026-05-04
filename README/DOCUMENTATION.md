@@ -18,7 +18,7 @@ O Nexus OS utiliza uma arquitetura estrita de **3 camadas** para evitar a explos
        ▼
 ┌─────────────┐
 │  GERENTE    │  Planeja, delega, revisa. Usa modelos premium (9Router).
-│  (Tech Lead)│  Permissões: delegate_tasks, manage_subtasks, create_tasks
+│  (Tech Lead)│  Permissões: delegate_tasks, create_tasks (inclui subtasks)
 └──────┬──────┘
        │ delegate_task (cria tarefa para o trabalhador)
        ▼
@@ -34,7 +34,7 @@ O Nexus OS utiliza uma arquitetura estrita de **3 camadas** para evitar a explos
 |-------|--------------|
 | **Gerente não escreve código** | Ele delega via `delegate_task` e revisa via `read_file` |
 | **Trabalhador não delega** | Permissão `delegate_tasks` desativada no painel |
-| **Trabalhador não cria subtasks** | Permissão `manage_subtasks` desativada no painel |
+| **Trabalhador não cria subtasks** | Permissão `create_tasks` desativada no painel |
 | **Subtasks ao invés de novas tarefas** | `create_task` e `delegate_task` são BLOQUEADOS por código dentro de contexto de tarefa — são convertidos em `add_subtask` automaticamente |
 | **Código vai para arquivo, não chat** | System prompt instrui: "NUNCA cole código no chat" |
 
@@ -49,7 +49,7 @@ Travas de segurança implementadas em nível de **código backend** (não depend
 | `create_agent` | Bloqueado até o humano digitar **"aprovado"** no chat |
 | `update_task_status → completed` | Bloqueado até o humano digitar **"aprovado"** no chat |
 | `delegate_task` | Requer permissão `delegate_tasks` no agente |
-| `add_subtask` | Requer permissão `manage_subtasks` no agente |
+| `add_subtask` | Requer permissão `create_tasks` no agente |
 | `create_task` / `delegate_task` dentro de Task | **Hard-blocked por código** — convertido automaticamente em subtask |
 
 ---
@@ -63,8 +63,7 @@ Cada agente possui permissões granulares configuráveis pela interface (página
 | Permissão | Chave JSON | Descrição |
 |-----------|-----------|-----------|
 | Delegar Tarefas | `delegate_tasks` | Criar tarefas e atribuir a outros agentes |
-| Gerenciar Subtasks | `manage_subtasks` | Criar/editar etapas no roadmap de tarefas |
-| Criar Tarefas | `create_tasks` | Criar tarefas independentes em projetos |
+| Criar Tarefas/Subtasks | `create_tasks` | Criar tarefas independentes ou etapas no roadmap |
 
 ### 📁 Arquivos
 
@@ -102,7 +101,7 @@ O Orchestrator expõe as seguintes ferramentas para os agentes via OpenAI-compat
 | `web_search` | `web_search` | Pesquisar na internet |
 | `create_task` | `create_tasks` | Criar tarefa independente (bloqueado dentro de task) |
 | `delegate_task` | `delegate_tasks` | Delegar tarefa para outro agente (bloqueado dentro de task) |
-| `add_subtask` | `manage_subtasks` | Adicionar etapa ao roadmap/checklist da tarefa |
+| `add_subtask` | `create_tasks` | Adicionar etapa ao roadmap/checklist da tarefa |
 | `update_task_status` | `create_tasks` | Alterar status de tarefa (completed requer aprovação humana) |
 | `create_agent` | `create_tasks` | Criar novo agente (requer aprovação humana) |
 

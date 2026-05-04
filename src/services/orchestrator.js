@@ -162,9 +162,31 @@ class Orchestrator {
 
       // Filter out internal thinking/monologue if the model outputs it
       let cleanContent = response.content || '';
+      
+      // 1. Remove explicit <thought> tags
       cleanContent = cleanContent.replace(/<thought>[\s\S]*?<\/thought>/gi, '').trim();
-      // Also remove common "Thinking:" or "Thought:" prefixes if they appear at the start
-      cleanContent = cleanContent.replace(/^(Thought|Thinking|Raciocínio):\s*/i, '').trim();
+      
+      // 2. Remove common internal monologue start patterns (English and PT)
+      const monologuePatterns = [
+        /^(Thought|Thinking|Raciocínio|Análise):\s*/i,
+        /^Okay, let me see what the user is asking/i,
+        /^Okay, the user just said/i,
+        /^First, I need to/i,
+        /^I should/i
+      ];
+      
+      monologuePatterns.forEach(p => {
+        cleanContent = cleanContent.replace(p, '').trim();
+      });
+
+      // 3. If there are multiple paragraphs and the first one looks like planning, skip it
+      const paragraphs = cleanContent.split('\n\n');
+      if (paragraphs.length > 1) {
+        const firstPara = paragraphs[0].toLowerCase();
+        if (firstPara.includes('i should') || firstPara.includes('i will') || firstPara.includes('let me') || firstPara.includes('the user is asking')) {
+           cleanContent = paragraphs.slice(1).join('\n\n').trim();
+        }
+      }
 
       // Save AI response as message
       const savedMsg = this.saveMessage(contextType, contextId, agent.id, 'assistant', cleanContent, { actions, model: response.model, usage: response.usage });
@@ -331,7 +353,7 @@ class Orchestrator {
       }
 
       case 'add_subtask': {
-        if (!permissions.manage_subtasks) return { error: 'Permission denied: manage_subtasks. Apenas o Gerente pode criar subtasks. Faça o trabalho e avise que terminou.' };
+        if (!permissions.create_tasks) return { error: 'Permission denied: create_tasks. Apenas o Gerente pode criar subtasks. Faça o trabalho e avise que terminou.' };
         const targetTaskId = args.task_id || (contextType === 'task' ? contextId : null);
         if (!targetTaskId) return { error: 'No task_id provided and not in a task context' };
 
@@ -428,7 +450,14 @@ class Orchestrator {
     system += '2. VISUAL ROADMAP (STRICT): You MUST use the `add_subtask` tool to populate the task\'s Roadmap. NEVER just list steps in text. If it\'s not in the Roadmap tool, it doesn\'t exist.\n';
     system += '3. DELEGATION VS EXECUTION: If there are other worker agents available, use `delegate_task`. IF YOU ARE ALONE OR NO WORKERS ARE ASSIGNED, YOU MUST EXECUTE THE WORK YOURSELF using `create_file` and `edit_file` immediately.\n';
     system += '4. NO PROCRASTINATION: Do not say "I will now do X". Just do X using your tools.\n';
-    system += '5. REVIEW: Use `read_file` to check quality. Only ask the human for approval at the VERY END ("versão final").\n\n';
+    system += '5. REVIEW: Use `read_file` to check quality. Only ask the human for approval at the VERY END ("versão final").\n';
+    system += '6. IDIOM: Always respond in Portuguese (PT-BR). Never use English for chat.\n\n';
+    
+    system += '=== EXPLOITS & EXAMPLES ===\n';
+    system += 'User: "Mude o status para review_pending"\n';
+    system += 'Assistant: [call update_task_status(status="review_pending")] "Status atualizado para review_pending. O script está pronto para sua análise."\n\n';
+    system += 'User: "Adicione o passo de testes"\n';
+    system += 'Assistant: [call add_subtask(text="Testar funcionalidades")] "Passo de testes adicionado ao Roadmap."\n\n';
 
     system += '=== IF YOU ARE A WORKER (e.g. Dev/Estagiário) ===\n';
     system += '1. EXECUTION: Write code strictly according to the task description. Use `create_file` or `edit_file`.\n';
