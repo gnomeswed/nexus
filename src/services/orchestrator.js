@@ -218,6 +218,31 @@ class Orchestrator {
         return { success: true, task_id: task.id, message: `Task created: ${args.title}` };
       }
 
+      case 'delegate_task': {
+        if (!permissions.create_tasks) return { error: 'Permission denied: create_tasks' };
+        const projectId = contextType === 'project' ? contextId : null;
+        
+        // Verify if agent_id exists
+        const targetAgent = this.db.prepare('SELECT id FROM agents WHERE id = ?').get(args.agent_id);
+        if (!targetAgent) return { error: `Agent ID ${args.agent_id} not found.` };
+
+        const result = this.db.prepare(`
+          INSERT INTO tasks (project_id, agent_id, title, description, priority, status)
+          VALUES (?, ?, ?, ?, 'medium', 'pending')
+        `).run(projectId, args.agent_id, args.title, args.description || '');
+
+        const taskId = result.lastInsertRowid;
+        const task = this.db.prepare('SELECT * FROM tasks WHERE id = ?').get(taskId);
+        if (this.io) this.io.emit('task:created', task);
+
+        // Auto-trigger the worker agent immediately
+        setTimeout(() => {
+          this.processMessage('task', taskId, "Você recebeu uma nova tarefa delegada. Analise a descrição, mude o status para 'in_progress' e comece o trabalho. Quando finalizar, avise que terminou.", args.agent_id).catch(console.error);
+        }, 1000);
+
+        return { success: true, task_id: taskId, message: `Task delegated successfully to agent ${args.agent_id}: ${args.title}` };
+      }
+
       case 'create_agent': {
         // Enforce Human-in-the-Loop Protocol
         const lastUserMsgs = this.db.prepare("SELECT content FROM messages WHERE context_type = ? AND context_id = ? AND role = 'user' ORDER BY created_at DESC LIMIT 5").all(contextType, contextId);
@@ -327,20 +352,26 @@ class Orchestrator {
       }
     }
 
-    system += '\n--- INSTRUCTIONS ---\n';
+    system += '\n--- MULTI-AGENT ORCHESTRATION PROTOCOL ---\n';
     system += 'Respond in the same language as the user. Be concise and actionable.\n';
-    system += 'When creating files, use the create_file tool. When you need information, use web_search.\n';
-    system += 'You can update task statuses with update_task_status, and hire new agents with create_agent.\n\n';
+    system += 'You are part of a Hierarchical Multi-Agent System (Manager -> Workers).\n\n';
+    
+    system += '=== IF YOU ARE A MANAGER (Lead Agent) ===\n';
+    system += '1. DELEGATION: Your job is to plan, review, and orchestrate. DO NOT write long code yourself.\n';
+    system += '2. USE WORKERS: Use the `delegate_task` tool to create a task and assign it to a Worker Agent (e.g. Estagiário/Dev) with specific instructions.\n';
+    system += '3. REVIEW: When a worker finishes a file, DO NOT ask them to paste the code in the chat. Use `read_file` to review it silently.\n';
+    system += '4. ROADMAP: Keep the project roadmap updated by marking items as completed when the workers deliver quality code.\n\n';
 
-    system += '=== TASK DELEGATION & SUBTASKS ===\n';
-    system += 'When you are inside a Task and need to break it down into smaller steps, DO NOT use create_task. That will pollute the main board.\n';
-    system += 'Instead, you MUST use the add_subtask tool to add steps to the current task\'s internal checklist.\n';
-    system += 'Only use create_task if you are explicitly asked to create a completely new, independent project task.\n\n';
+    system += '=== IF YOU ARE A WORKER (e.g. Dev/Estagiário) ===\n';
+    system += '1. EXECUTION: Write code strictly according to the task description. Use `create_file` or `edit_file`.\n';
+    system += '2. NO CODE IN CHAT: NEVER paste large code blocks in the chat. This bloats the token context.\n';
+    system += '3. COMPLETION: When you finish your work, reply in chat: "Arquivo criado em [caminho]. Aguardando revisão do Gerente."\n';
+    system += '4. DO NOT COMPLETE TASKS: Only the Human or Manager can use `update_task_status` to "completed".\n\n';
 
     system += '=== TASK RESOLUTION PROTOCOL (MANDATORY) ===\n';
-    system += '1. EXECUTION: The assigned agent performs the task but DOES NOT complete it.\n';
-    system += '2. REVIEW: The agent presents the final work in the chat and asks for a review.\n';
-    system += '3. QUALITY CHECK: The Manager or Human verifies if all requirements were met flawlessly.\n';
+    system += '1. EXECUTION: Worker performs the task via tools.\n';
+    system += '2. REVIEW: Worker tells Manager it is ready.\n';
+    system += '3. QUALITY CHECK: Manager verifies the file using `read_file`.\n';
     system += '4. APPROVAL: ONLY the Human (or the Manager after Human approval) can use update_task_status to set it to "completed".\n';
     system += 'CRITICAL: Never change a task to "completed" without explicit Human approval saying "aprovado".\n\n';
     

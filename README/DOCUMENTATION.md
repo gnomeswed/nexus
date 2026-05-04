@@ -2,12 +2,15 @@
 
 O Nexus OS é um orquestrador de IA autônomo projetado para criar, gerenciar e delegar tarefas para múltiplos agentes simultaneamente. Construído em Node.js com SQLite, ele foi projetado para rodar localmente ou em uma VPS.
 
-## 🚀 Filosofia de Roteamento (Cérebro x Músculos)
+## 🚀 Filosofia de Roteamento & Arquitetura Hierárquica (Manager -> Worker)
 
-Diferente de sistemas de IA tradicionais engessados, o Nexus OS **não** te prende a um único provedor de API. A hierarquia ideal de agentes no Nexus funciona assim:
+O Nexus OS foi projetado para evitar a "explosão de tokens" e falhas de protocolo comuns em sistemas multi-agentes. Nós utilizamos uma arquitetura estrita baseada em delegação, combinada com uma roteirização híbrida de APIs.
 
-1. **Tech Lead (O Cérebro) via 9Router:** Um agente principal com acesso aos melhores modelos do mercado (Claude 3.5, GPT-4o, DeepSeek) usando o 9Router como proxy. O 9Router abstrai a complexidade das chaves de API e garante que o seu gerente tenha alto poder cognitivo.
-2. **Estagiários (Os Músculos) via Ollama Local:** Agentes subordinados configurados para rodar de graça usando modelos locais open-source (como Llama 3) via Ollama. O gerente envia tarefas repetitivas, extração de dados e conversão de textos para os estagiários processarem sem gastar nenhum token da sua franquia paga.
+### A Hierarquia:
+1. **O Gerente (O Cérebro):** O usuário conversa APENAS com o Gerente. Ele usa modelos avançados e caros via **9Router** (Claude 3.5, GPT-4o, DeepSeek). Ele planeja, cria tarefas, avalia o trabalho e delega. Como ele não escreve código, ele gasta pouquíssimos tokens de saída.
+2. **Os Estagiários (Os Músculos):** Trabalhadores braçais configurados para rodar de graça usando modelos open-source (Gemma, Llama) via **Ollama Local**. Eles recebem tarefas do Gerente (via ferramenta `delegate_task`), processam milhares de linhas de código e salvam em arquivos. Eles não enviam o código para o chat, preservando o contexto e o custo.
+
+*Essa separação garante que seu sistema tenha raciocínio de ponta com um custo próximo de zero.*
 
 ## 🛡️ Segurança: Human-in-the-Loop Protocol
 

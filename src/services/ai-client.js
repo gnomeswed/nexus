@@ -239,6 +239,23 @@ class AIClient {
           }
         }
       });
+      
+      tools.push({
+        type: 'function',
+        function: {
+          name: 'delegate_task',
+          description: 'Create a task and immediately assign it to a specific sub-agent (Worker).',
+          parameters: {
+            type: 'object',
+            properties: {
+              title: { type: 'string', description: 'Task title' },
+              description: { type: 'string', description: 'Task description and specific instructions for the worker' },
+              agent_id: { type: 'integer', description: 'ID of the agent to assign the task to' }
+            },
+            required: ['title', 'description', 'agent_id']
+          }
+        }
+      });
     }
 
     return tools;

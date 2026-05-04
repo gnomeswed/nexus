@@ -34,10 +34,18 @@ Documento de acompanhamento da evolução, refatorações e próximos passos do 
 - [x] **Fix:** `stream: false` faltando nos endpoints de teste → adicionado para evitar falha de parse JSON.
 - [x] **Fix:** `orchestrator` não era passado para `setupWebSocket` → corrigido em `server.js`.
 
+### v1.2.0 — Orquestração & Autonomia (03/05/2026)
+- [x] **Feature:** Telemetria em tempo real (`agent:thinking`) com card de Status da Inteligência no UI.
+- [x] **Feature:** Pastas automáticas isoladas para Tarefas Avulsas (`tarefas/task_id`).
+- [x] **Fix:** Tolerância a falhas na conversão JSON para evitar crashes (Unterminated string).
+
 ---
 
-## 🚧 Em Andamento
-- [ ] Validar chat de IA end-to-end na UI com modelos nvidia e kiro.
+## 🚧 Em Andamento (Arquitetura Multi-Agente)
+- [ ] **Arquitetura Hierárquica:** Transição de "Humano-Trabalhador" para "Humano-Gerente-Trabalhadores".
+- [ ] **Ferramentas de Delegação:** Adicionar `delegate_task` para o Gerente acionar sub-agentes.
+- [ ] **Otimização Híbrida (Tokens):** Configuração global para forçar Estagiários a usarem Ollama local (Low-cost/Free) e o Gerente usar o 9Router.
+- [ ] **Auto-Sumarização de Contexto:** Limpar e resumir o histórico periodicamente para economizar tokens e evitar crashes em conversas longas.
 
 ---
 
