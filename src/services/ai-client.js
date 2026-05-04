@@ -216,7 +216,7 @@ class AIClient {
             type: 'object',
             properties: {
               task_id: { type: 'integer', description: 'ID of the task to update (optional)' },
-              status: { type: 'string', enum: ['pending', 'in_progress', 'completed', 'cancelled'] }
+              status: { type: 'string', enum: ['pending', 'in_progress', 'review_pending', 'completed', 'cancelled'] }
             },
             required: ['status']
           }

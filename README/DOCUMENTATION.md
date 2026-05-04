@@ -8,9 +8,9 @@ O Nexus OS foi projetado para evitar a "explosão de tokens" e falhas de protoco
 
 ### A Hierarquia:
 1. **O Gerente (O Cérebro):** O usuário conversa APENAS com o Gerente. Ele usa modelos avançados e caros via **9Router** (Claude 3.5, GPT-4o, DeepSeek). Ele planeja, cria tarefas, avalia o trabalho e delega. Como ele não escreve código, ele gasta pouquíssimos tokens de saída.
-2. **Os Estagiários (Os Músculos):** Trabalhadores braçais configurados para rodar de graça usando modelos open-source (Gemma, Llama) via **Ollama Local**. Eles recebem tarefas do Gerente (via ferramenta `delegate_task`), processam milhares de linhas de código e salvam em arquivos. Eles não enviam o código para o chat, preservando o contexto e o custo.
+2. **Os Trabalhadores (Os Músculos):** Agentes subordinados que fazem o trabalho pesado (processar milhares de linhas de código, extração de dados). Eles podem rodar de forma 100% gratuita usando modelos open-source (Gemma, Llama) via **Ollama Local** (se a VPS suportar), OU via **9Router** em instâncias mais fracas. Eles recebem ordens do Gerente (via ferramenta `delegate_task`) e salvam os resultados direto em arquivos, nunca poluindo o chat com blocos de código gigantes, preservando o contexto e o custo.
 
-*Essa separação garante que seu sistema tenha raciocínio de ponta com um custo próximo de zero.*
+*Essa separação garante que seu sistema tenha raciocínio de ponta no planejamento, com flexibilidade total para baratear o custo da mão de obra de desenvolvimento.*
 
 ## 🛡️ Segurança: Human-in-the-Loop Protocol
 

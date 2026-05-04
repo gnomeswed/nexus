@@ -67,6 +67,7 @@ const TaskDetailPage = {
           <select class="form-select" style="width:auto;padding:6px 30px 6px 10px;font-size:13px" onchange="TaskDetailPage.updateStatus(${id},this.value)">
             <option value="pending" ${task.status === 'pending' ? 'selected' : ''}>Pending</option>
             <option value="in_progress" ${task.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+            <option value="review_pending" ${task.status === 'review_pending' ? 'selected' : ''}>Review Pending</option>
             <option value="completed" ${task.status === 'completed' ? 'selected' : ''}>Completed</option>
             <option value="cancelled" ${task.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
           </select>
