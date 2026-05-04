@@ -12,6 +12,10 @@ const Socket = {
     if (this.io) this.io.on(event, callback);
   },
 
+  off(event) {
+    if (this.io) this.io.off(event);
+  },
+
   emit(event, data) {
     if (this.io) this.io.emit(event, data);
   },

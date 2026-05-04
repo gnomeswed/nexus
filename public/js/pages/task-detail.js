@@ -12,6 +12,7 @@ const TaskDetailPage = {
     // Join WebSocket room for live chat
     setTimeout(() => {
       Socket.joinRoom('task', id);
+      Socket.off('chat:message'); // Limpa os "ouvidos" antigos para não duplicar
       Socket.on('chat:message', (msg) => {
         const chatArea = document.getElementById('task-chat-messages');
         if (!chatArea) return; // If we navigated away
