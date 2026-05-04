@@ -1,6 +1,6 @@
 <div align="center">
   <img src="https://img.shields.io/badge/Status-Active-success.svg" alt="Status" />
-  <img src="https://img.shields.io/badge/Version-1.4.0-blue.svg" alt="Version" />
+  <img src="https://img.shields.io/badge/Version-1.4.1-blue.svg" alt="Version" />
   <img src="https://img.shields.io/badge/Node.js-Ready-green.svg" alt="Node" />
   <h1>🚀 Nexus OS</h1>
   <p>Orquestrador autônomo de agentes de IA, rodando localmente ou em VPS com suporte a 9Router e Ollama.</p>

@@ -3,7 +3,7 @@
 Documento de acompanhamento da evolução, refatorações e próximos passos do Nexus OS.
 
 ## 📌 Status Atual
-- **Versão:** 1.4.0
+- **Versão:** 1.4.1
 - **Stack:** Node.js, Express, SQLite, Vanilla JS/CSS (Glassmorphism).
 - **Integração IA:** Proxy centralizado via **9Router** (`localhost:20128/v1`).
 - **Modelos testados e funcionando:** `nvidia/minimaxai/minimax-m2.7`, `nvidia/z-ai/glm4.7`
@@ -62,6 +62,7 @@ Documento de acompanhamento da evolução, refatorações e próximos passos do 
 - [x] **Feature (Autonomia):** Sistema de Heartbeat (Ping) — O Gerente principal "desperta" a cada 15 minutos para verificar tarefas pendentes e reativar agentes parados.
 - [x] **Feature (Autonomia):** Aprovação Automática de Baixo Risco — Tarefas de pesquisa, leitura e formatação agora são auto-aprovadas, permitindo fluxo contínuo sem intervenção humana.
 - [x] **Feature (Memória):** Memória de Longo Prazo — Nova tabela `memories` e ferramentas `save_memory`/`search_memory` para os agentes aprenderem com projetos passados.
+- [x] **Hotfix (Critical):** Corrigido erro de sintaxe (redeclaração de variável) no `orchestrator.js` que causava crash na inicialização.
 
 ---
 

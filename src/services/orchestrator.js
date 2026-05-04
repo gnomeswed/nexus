@@ -380,9 +380,7 @@ class Orchestrator {
           }
         }
 
-        const targetTaskId = args.task_id || (contextType === 'task' ? contextId : null);
-        if (!targetTaskId) return { error: 'No task_id provided and not in a task context' };
-
+        // Perform the update
         const result = this.db.prepare('UPDATE tasks SET status = ? WHERE id = ?').run(args.status, targetTaskId);
         if (result.changes === 0) return { error: 'Task not found' };
         if (this.io) this.io.emit('task:updated', { id: targetTaskId, status: args.status });
