@@ -28,7 +28,7 @@ const TasksPage = {
                 <div style="flex:1">
                   <div style="font-size:14px;font-weight:500">${t.title}</div>
                   <div style="font-size:12px;color:var(--text-muted)">
-                    ${t.project_name ? '📁 ' + t.project_name + ' · ' : ''}${t.agent_name || 'Sem agente'}
+                    ${t.project_name ? '📁 ' + t.project_name + ' · ' : ''}${t.agent_name || 'Sem agente'}${t.agent_count > 1 ? ` + ${t.agent_count - 1}` : ''}
                   </div>
                 </div>
                 <span class="priority-badge ${t.priority}">${t.priority}</span>
@@ -65,11 +65,20 @@ const TasksPage = {
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">Agente Responsável</label>
-            <select class="form-select" id="task-agent">
-              <option value="">Sem agente</option>
-              ${agents.map(a => `<option value="${a.id}">${a.avatar_emoji} ${a.name}</option>`).join('')}
-            </select>
+            <label class="form-label">Agentes Responsáveis</label>
+            <div id="task-agents" class="agent-checklist" style="max-height:160px">
+              ${agents.map(a => `
+                <label class="agent-check-item">
+                  <input type="checkbox" value="${a.id}">
+                  <span class="agent-avatar" style="width:28px;height:28px;font-size:14px">${a.avatar_emoji || '🤖'}</span>
+                  <div>
+                    <div style="font-size:13px;font-weight:500">${a.name}</div>
+                    <div style="font-size:11px;color:var(--text-muted)">${a.role || ''}</div>
+                  </div>
+                  <span class="status-badge ${a.status}" style="margin-left:auto;font-size:10px"><span class="dot"></span>${a.status}</span>
+                </label>
+              `).join('')}
+            </div>
           </div>
         </div>
         <div class="form-row">
@@ -98,12 +107,15 @@ const TasksPage = {
   async createTask() {
     const title = document.getElementById('task-title').value.trim();
     if (!title) return Toast.error('Título é obrigatório');
+    const checkedAgents = document.querySelectorAll('#task-agents input[type="checkbox"]:checked');
+    const agent_ids = Array.from(checkedAgents).map(c => parseInt(c.value));
+
     try {
       await API.createTask({
         title,
         description: document.getElementById('task-desc').value,
         project_id: document.getElementById('task-project').value || null,
-        agent_id: document.getElementById('task-agent').value || null,
+        agent_ids,
         priority: document.getElementById('task-priority').value,
         due_date: document.getElementById('task-due').value || null
       });

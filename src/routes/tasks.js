@@ -9,7 +9,8 @@ router.get('/', (req, res) => {
 
   let query = `
     SELECT t.*, a.name as agent_name, a.avatar_emoji as agent_emoji,
-           p.name as project_name
+           p.name as project_name,
+           (SELECT COUNT(*) FROM task_agents ta WHERE ta.task_id = t.id) as agent_count
     FROM tasks t
     LEFT JOIN agents a ON t.agent_id = a.id
     LEFT JOIN projects p ON t.project_id = p.id
@@ -41,6 +42,13 @@ router.get('/:id', (req, res) => {
   `).get(req.params.id);
 
   if (!task) return res.status(404).json({ error: 'Task not found' });
+
+  // Agents for this task
+  task.agents = db.prepare(`
+    SELECT a.* FROM agents a
+    JOIN task_agents ta ON a.id = ta.agent_id
+    WHERE ta.task_id = ?
+  `).all(req.params.id);
 
   // Messages for this task
   task.messages = db.prepare(`
@@ -75,6 +83,18 @@ router.post('/', (req, res) => {
     due_date || null
   );
 
+  const taskId = result.lastInsertRowid;
+  const { agent_ids } = req.body;
+
+  if (agent_ids && agent_ids.length > 0) {
+    const assignStmt = db.prepare('INSERT INTO task_agents (task_id, agent_id) VALUES (?, ?)');
+    agent_ids.forEach(aid => assignStmt.run(taskId, aid));
+    // Set the first one as primary agent_id for legacy support
+    db.prepare('UPDATE tasks SET agent_id = ? WHERE id = ?').run(agent_ids[0], taskId);
+  } else if (agent_id) {
+    db.prepare('INSERT INTO task_agents (task_id, agent_id) VALUES (?, ?)').run(taskId, agent_id);
+  }
+
   const task = db.prepare(`
     SELECT t.*, a.name as agent_name, a.avatar_emoji as agent_emoji,
            p.name as project_name
@@ -82,7 +102,7 @@ router.post('/', (req, res) => {
     LEFT JOIN agents a ON t.agent_id = a.id
     LEFT JOIN projects p ON t.project_id = p.id
     WHERE t.id = ?
-  `).get(result.lastInsertRowid);
+  `).get(taskId);
 
   req.app.locals.io.emit('task:created', task);
   res.status(201).json(task);
@@ -123,6 +143,19 @@ router.put('/:id', (req, res) => {
     due_date !== undefined ? due_date : existing.due_date,
     req.params.id
   );
+
+  const { agent_ids } = req.body;
+  if (agent_ids !== undefined) {
+    db.prepare('DELETE FROM task_agents WHERE task_id = ?').run(req.params.id);
+    if (agent_ids && agent_ids.length > 0) {
+      const assignStmt = db.prepare('INSERT INTO task_agents (task_id, agent_id) VALUES (?, ?)');
+      agent_ids.forEach(aid => assignStmt.run(req.params.id, aid));
+      // Update primary agent_id for legacy
+      db.prepare('UPDATE tasks SET agent_id = ? WHERE id = ?').run(agent_ids[0], req.params.id);
+    } else {
+      db.prepare('UPDATE tasks SET agent_id = NULL WHERE id = ?').run(req.params.id);
+    }
+  }
 
   const task = db.prepare(`
     SELECT t.*, a.name as agent_name, a.avatar_emoji as agent_emoji,

@@ -198,15 +198,11 @@ const TaskDetailPage = {
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Agente Responsável</label>
+              <label class="form-label">Agentes Responsáveis</label>
               <div id="edit-task-agents" class="agent-checklist" style="max-height:160px">
-                <label class="agent-check-item">
-                  <input type="radio" name="task-agent" value="" ${!task.agent_id ? 'checked' : ''}>
-                  <span style="font-size:13px;color:var(--text-muted)">Sem agente</span>
-                </label>
                 ${agents.map(a => `
                   <label class="agent-check-item">
-                    <input type="radio" name="task-agent" value="${a.id}" ${task.agent_id === a.id ? 'checked' : ''}>
+                    <input type="checkbox" value="${a.id}" ${(task.agents || []).some(ta => ta.id === a.id) || task.agent_id === a.id ? 'checked' : ''}>
                     <span class="agent-avatar" style="width:28px;height:28px;font-size:14px">${a.avatar_emoji || '🤖'}</span>
                     <div>
                       <div style="font-size:13px;font-weight:500">${a.name}</div>
@@ -241,13 +237,15 @@ const TaskDetailPage = {
   async saveEdit(id) {
     const title = document.getElementById('edit-task-title').value.trim();
     if (!title) return Toast.error('Título é obrigatório');
-    const selectedAgent = document.querySelector('input[name="task-agent"]:checked');
+    const checkedAgents = document.querySelectorAll('#edit-task-agents input[type="checkbox"]:checked');
+    const agent_ids = Array.from(checkedAgents).map(c => parseInt(c.value));
+    
     try {
       await API.updateTask(id, {
         title,
         description: document.getElementById('edit-task-desc').value,
         project_id: document.getElementById('edit-task-project').value || null,
-        agent_id: selectedAgent?.value || null,
+        agent_ids,
         priority: document.getElementById('edit-task-priority').value
       });
       Modal.close();

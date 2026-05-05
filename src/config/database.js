@@ -114,6 +114,16 @@ function runMigrations(db) {
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
     );
 
+    -- Task-Agent assignments (Multiple agents per task)
+    CREATE TABLE IF NOT EXISTS task_agents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      task_id INTEGER NOT NULL,
+      agent_id INTEGER NOT NULL,
+      FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+      FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+      UNIQUE(task_id, agent_id)
+    );
+
     -- Usage log for token tracking
     CREATE TABLE IF NOT EXISTS usage_log (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
