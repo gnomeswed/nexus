@@ -199,6 +199,18 @@ class Orchestrator {
 
         // Get next response
         response = await aiClient.chat(agent, messages, { enableTools: true });
+        
+        // AUTO-POKE: If manager/lead and work left, but AI tried to stop without a question
+        if (iterations < 5 && (!response.tool_calls || response.tool_calls.length === 0) && !response.content?.includes('?')) {
+           const hasPending = this.checkPendingWork(contextType, contextId);
+           if (hasPending) {
+              console.log(`[Orchestrator] Auto-poking ${agent.name} to continue pending work...`);
+              messages.push({ role: 'assistant', content: response.content || '...' });
+              messages.push({ role: 'system', content: 'SISTEMA: Você ainda tem trabalho pendente no roadmap/checklist. Continue executando o plano ou delegue as tarefas restantes para os agentes disponíveis. NÃO PARE até que o trabalho estratégico esteja encaminhado ou concluído.' });
+              response = await aiClient.chat(agent, messages, { enableTools: true });
+              // The while loop will handle the new response tool calls if any
+           }
+        }
       }
 
       // Filter out internal thinking/monologue if the model outputs it
@@ -325,16 +337,10 @@ class Orchestrator {
       case 'delegate_task': {
         if (!permissions.delegate_tasks) return { error: 'Permission denied: delegate_tasks. Este agente não tem permissão para delegar tarefas. Faça o trabalho usando create_file/edit_file.' };
         
-        // HARD BLOCK: Inside a task context, force subtask instead of creating new tasks
-        if (contextType === 'task') {
-          const subtaskResult = this.executeTool('add_subtask', { task_id: contextId, text: `[Delegado] ${args.title}` + (args.description ? ' — ' + args.description : '') }, agent, contextType, contextId, projectFolder);
-          return { success: true, message: `SISTEMA: delegate_task bloqueado dentro de tarefa. Subtarefa adicionada ao roadmap. Execute o trabalho AQUI usando create_file/edit_file.` };
-        }
-        
-        const projectId = contextType === 'project' ? contextId : null;
+        const projectId = contextType === 'project' ? contextId : (contextType === 'task' ? this.db.prepare('SELECT project_id FROM tasks WHERE id = ?').get(contextId)?.project_id : null);
         
         // Verify if agent_id exists
-        const targetAgent = this.db.prepare('SELECT id FROM agents WHERE id = ?').get(args.agent_id);
+        const targetAgent = this.db.prepare('SELECT id, name FROM agents WHERE id = ?').get(args.agent_id);
         if (!targetAgent) return { error: `Agent ID ${args.agent_id} not found.` };
 
         const result = this.db.prepare(`
@@ -348,10 +354,11 @@ class Orchestrator {
 
         // Auto-trigger the worker agent immediately
         setTimeout(() => {
-          this.processMessage('task', taskId, "Você recebeu uma nova tarefa delegada. Analise a descrição, mude o status para 'in_progress' e comece o trabalho. Use as ferramentas create_file/edit_file diretamente. NÃO delegue para outros agentes. Quando finalizar, avise que terminou.", args.agent_id).catch(console.error);
-        }, 1000);
+          console.log(`[Orchestrator] Auto-triggering delegated agent ${args.agent_id} for task ${taskId}`);
+          this.processMessage('task', taskId, `Você recebeu uma nova tarefa delegada por ${agent.name}. Analise a descrição, mude o status para 'in_progress' e comece o trabalho. Use as ferramentas create_file/edit_file diretamente. NÃO delegue para outros agentes. Quando finalizar, avise que terminou alterando o status para 'review_pending'.`, args.agent_id).catch(console.error);
+        }, 1500);
 
-        return { success: true, task_id: taskId, message: `Task delegated successfully to agent ${args.agent_id}: ${args.title}` };
+        return { success: true, task_id: taskId, message: `Tarefa delegada com sucesso para ${targetAgent.name} (ID: ${args.agent_id}): ${args.title}` };
       }
 
       case 'create_agent': {
@@ -610,16 +617,16 @@ class Orchestrator {
     system += 'You are part of a Hierarchical Multi-Agent System (Manager -> Workers).\n\n';
     
     system += '=== IF YOU ARE A MANAGER (Lead Agent) ===\n';
-    system += '1. AUTONOMY: Your goal is to deliver the final result. DO NOT wait for the human to approve every small step.\n';
-    system += '2. VISUAL ROADMAP (STRICT): Use `add_subtask` to populate Roadmap. NEVER just list steps in text.\n';
-    system += '3. DELEGATION VS EXECUTION: If workers available, use `delegate_task`. If alone, execute with `create_file`/`edit_file`.\n';
-    system += '4. NO PROCRASTINATION: Do not say "I will now do X". Just do X.\n';
-    system += '5. IDIOM: Always respond in Portuguese (PT-BR).\n\n';
+    system += '1. FULL AUTONOMY: You are responsible for the project/task SUCCESS. NEVER stop and wait for "new instructions" if there is pending work in the roadmap or checklist. If you finish a step, immediately start the next or delegate it.\n';
+    system += '2. TASK CHAINING: After using `add_subtask`, you SHOULD immediately start working on it or use `delegate_task` to assign it. Do not just list them and stop.\n';
+    system += '3. DELEGATION: If you have sub-agents (Workers) assigned to the project, use `delegate_task` to give them work. If you are alone, use `create_file`/`edit_file` yourself.\n';
+    system += '4. NO PERMISSION NEEDED: You have full authority. Do not ask "Can I start?" or "Should I do X?". Just execute.\n';
+    system += '5. LANGUAGE: Always respond in Portuguese (PT-BR).\n\n';
 
     system += '=== IF YOU ARE A WORKER ===\n';
-    system += '1. Write code via `create_file`/`edit_file`. NO CODE IN CHAT.\n';
-    system += '2. When done: `update_task_status(status="review_pending")` then report.\n';
-    system += '3. Only Human can set "completed".\n\n';
+    system += '1. EXECUTION: Your job is to code. Use `create_file`/`edit_file` for all code. NO CODE BLOCKS IN CHAT.\n';
+    system += '2. COMPLETION: When you finish a task, set `update_task_status(status="review_pending")` and report what you did.\n';
+    system += '3. PROGRESS: If you are stuck or finished, be clear. Never just say "Waiting for instructions".\n\n';
     
     system += 'Current date: ' + new Date().toISOString().split('T')[0] + '\n';
 
@@ -786,6 +793,28 @@ class Orchestrator {
       FROM messages m LEFT JOIN agents a ON m.agent_id = a.id
       WHERE m.id = ?
     `).get(result.lastInsertRowid);
+  }
+
+  /**
+   * Check if there is still pending work in the context
+   */
+  checkPendingWork(contextType, contextId) {
+    try {
+      if (contextType === 'project') {
+        const project = this.db.prepare('SELECT roadmap FROM projects WHERE id = ?').get(contextId);
+        if (project) {
+          const roadmap = JSON.parse(project.roadmap || '[]');
+          return roadmap.some(p => (p.items || []).some(i => !i.done));
+        }
+      } else if (contextType === 'task') {
+        const task = this.db.prepare('SELECT checklist FROM tasks WHERE id = ?').get(contextId);
+        if (task) {
+          const checklist = JSON.parse(task.checklist || '[]');
+          return checklist.some(c => !c.done);
+        }
+      }
+    } catch(e) { console.error('[PendingWorkCheck]', e.message); }
+    return false;
   }
 }
 
