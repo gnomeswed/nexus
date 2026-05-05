@@ -97,6 +97,9 @@ const ReviewsPage = {
   async approve(taskId) {
     try {
       await API.updateTask(taskId, { status: 'completed' });
+      // Notify agent
+      await API.sendAIChat('task', taskId, "SISTEMA: Tarefa aprovada pelo usuário. Ótimo trabalho!");
+      
       const card = document.getElementById(`review-card-${taskId}`);
       if (card) {
         card.style.opacity = '0.3';
@@ -141,10 +144,15 @@ const ReviewsPage = {
       try {
         const allTasks = await API.getTasks();
         const pending = allTasks.filter(t => t.status === 'review_pending');
-        for (const t of pending) {
-          await API.updateTask(t.id, { status: 'completed' });
-        }
-        Toast.success(`${pending.length} tarefa(s) aprovada(s)!`);
+        
+        // Use Promise.allSettled for robustness
+        const results = await Promise.allSettled(pending.map(async t => {
+            await API.updateTask(t.id, { status: 'completed' });
+            await API.sendAIChat('task', t.id, "SISTEMA: Tarefa aprovada pelo usuário via aprovação em massa.");
+        }));
+        
+        const successCount = results.filter(r => r.status === 'fulfilled').length;
+        Toast.success(`${successCount} tarefa(s) aprovada(s)!`);
         App.refresh();
       } catch(e) { Toast.error(e.message); }
     });

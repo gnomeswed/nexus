@@ -30,8 +30,8 @@ const ProjectsPage = {
                 <div class="agent-card-header">
                   <div class="agent-avatar" style="background:var(--bg-tertiary)">📁</div>
                   <div style="flex:1;min-width:0">
-                    <div class="agent-name">${p.name}</div>
-                    <div class="agent-role" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.description || 'Sem descrição'}</div>
+                    <div class="agent-name">${escapeHtml(p.name)}</div>
+                    <div class="agent-role" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(p.description || 'Sem descrição')}</div>
                   </div>
                   <span class="status-badge ${p.status}"><span class="dot"></span>${p.status}</span>
                 </div>

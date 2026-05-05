@@ -5,7 +5,7 @@ const API = {
   _cacheTTL: 30000, // 30 seconds
 
   async request(method, path, body = null) {
-    const pin = localStorage.getItem('nexus_pin');
+    const pin = sessionStorage.getItem('nexus_pin');
     const opts = { 
       method, 
       headers: { 

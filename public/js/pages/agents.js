@@ -27,8 +27,8 @@ const AgentsPage = {
                 <div class="agent-card-header">
                   <div class="agent-avatar">${a.avatar_emoji || '🤖'}</div>
                   <div>
-                    <div class="agent-name">${a.name}</div>
-                    <div class="agent-role">${a.role || 'Sem cargo'}</div>
+                    <div class="agent-name">${escapeHtml(a.name)}</div>
+                    <div class="agent-role">${escapeHtml(a.role || 'Sem cargo')}</div>
                   </div>
                   <div style="margin-left:auto">
                     <span class="status-badge ${a.status}"><span class="dot"></span>${a.status}</span>

@@ -14,7 +14,12 @@ const App = {
     window.addEventListener('hashchange', () => this.route());
     this.route();
     this.updateCounts();
+    
+    // Global notification listeners
+    this.setupGlobalListeners();
+  },
 
+  setupGlobalListeners() {
     Socket.on('agent:created', () => this.updateCounts());
     Socket.on('agent:deleted', () => this.updateCounts());
     Socket.on('project:created', () => this.updateCounts());
@@ -26,6 +31,7 @@ const App = {
       if (t?.status === 'review_pending') this.notify(`📋 Tarefa aguardando revisão`, 'info');
     });
     Socket.on('reminder:fire', (r) => this.notify(`⏰ ${r.title}`, 'warning'));
+  },
 
     // Notification bell click
     const notifBtn = document.getElementById('notif-btn');
@@ -79,13 +85,18 @@ const App = {
     });
   },
 
-  verifyPin() {
+  async verifyPin() {
     const input = document.getElementById('nexus-pin-input');
     const pin = input?.value;
     if (!pin) return;
-    localStorage.setItem('nexus_pin', pin);
+    
+    // Security: Use sessionStorage instead of localStorage
+    // This ensures the PIN is forgotten when the tab is closed
+    sessionStorage.setItem('nexus_pin', pin);
+    localStorage.removeItem('nexus_pin'); // Cleanup old insecure storage
+    
     window._nexus_pin_prompting = false;
-    // Test the PIN by refreshing
+    Modal.close();
     this.refresh();
   },
 
@@ -93,12 +104,20 @@ const App = {
     const hash = window.location.hash.slice(1) || '/';
     const container = document.getElementById('page-container');
 
+    // Cleanup page-specific socket listeners
+    Socket.off('chat:message');
+    Socket.off('agent:thinking');
+
     document.querySelectorAll('.nav-item').forEach(item => {
       item.classList.remove('active');
       const page = item.dataset.page;
       if (page === 'dashboard' && hash === '/') item.classList.add('active');
       else if (page && hash.startsWith('/' + page)) item.classList.add('active');
     });
+
+    // UX: Preserve scroll for chat if refreshing
+    const chatEl = document.getElementById('task-chat-messages');
+    const chatScroll = chatEl ? chatEl.scrollTop : null;
 
     let html = '';
     try {
@@ -130,8 +149,12 @@ const App = {
 
     container.innerHTML = html;
 
-    const chatEl = document.getElementById('chat-messages') || document.getElementById('task-chat-messages');
-    if (chatEl) chatEl.scrollTop = chatEl.scrollHeight;
+    // UX: Restore scroll if it was captured, otherwise go to bottom
+    const newChatEl = document.getElementById('task-chat-messages') || document.getElementById('chat-messages');
+    if (newChatEl) {
+      if (chatScroll !== null) newChatEl.scrollTop = chatScroll;
+      else newChatEl.scrollTop = newChatEl.scrollHeight;
+    }
 
     // Close mobile sidebar on nav
     document.getElementById('sidebar').classList.remove('open');

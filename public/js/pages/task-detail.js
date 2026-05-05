@@ -108,7 +108,7 @@ const TaskDetailPage = {
                          actionsHtml += `
                             <div class="approval-actions" style="margin-top:12px;display:flex;gap:8px">
                               <button class="btn btn-sm" style="background:var(--accent-success);color:white;padding:4px 12px;font-size:12px" onclick="TaskDetailPage.approveAction('${meta.action}', ${meta.task_id || id}, ${JSON.stringify(meta.args || {}).replace(/"/g, '&quot;')})">✅ Aprovar</button>
-                              <button class="btn btn-sm btn-danger" style="padding:4px 12px;font-size:12px" onclick="TaskDetailPage.rejectAction()">❌ Negar</button>
+                              <button class="btn btn-sm btn-danger" style="padding:4px 12px;font-size:12px" onclick="TaskDetailPage.rejectAction(${meta.task_id || id})">❌ Negar</button>
                             </div>
                          `;
                       }
@@ -175,7 +175,7 @@ const TaskDetailPage = {
              actionsHtml += `
                 <div class="approval-actions" style="margin-top:12px;display:flex;gap:8px">
                   <button class="btn btn-sm" style="background:var(--accent-success);color:white;padding:4px 12px;font-size:12px" onclick="TaskDetailPage.approveAction('${meta.action}', ${meta.task_id || taskId}, ${JSON.stringify(meta.args || {}).replace(/"/g, '&quot;')})">✅ Aprovar</button>
-                  <button class="btn btn-sm btn-danger" style="padding:4px 12px;font-size:12px" onclick="TaskDetailPage.rejectAction()">❌ Negar</button>
+                  <button class="btn btn-sm btn-danger" style="padding:4px 12px;font-size:12px" onclick="TaskDetailPage.rejectAction(${meta.task_id || taskId})">❌ Negar</button>
                 </div>
              `;
           }
@@ -381,13 +381,12 @@ const TaskDetailPage = {
     } catch(e) { Toast.error(e.message); }
   },
 
-  async rejectAction() {
-    Toast.info('Ação não autorizada. O agente continuará aguardando.');
-  },
-
-  escapeHtml(text) {
-    if (!text) return '';
-    return text.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  async rejectAction(contextId) {
+    try {
+      await API.sendAIChat('task', contextId, "SISTEMA: O usuário negou esta ação proposta. Por favor, tente uma abordagem diferente ou peça mais informações.");
+      Toast.info('Ação negada. O agente foi notificado.');
+      App.refresh();
+    } catch(e) { Toast.error(e.message); }
   },
 
   deleteTask(id) {

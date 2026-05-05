@@ -160,7 +160,20 @@ const ProjectDetailPage = {
 
   switchTab(tab, id) {
     this.currentTab = tab;
-    App.refresh();
+    // Fast tab switching without full App.refresh()
+    const container = document.getElementById('tab-content');
+    if (!container) return App.refresh();
+
+    // Active tab class update
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    const activeTab = document.querySelector(`.tab[onclick*="'${tab}'"]`);
+    if (activeTab) activeTab.classList.add('active');
+
+    // Re-render only the tab content
+    this.render(id).then(html => {
+        // This is a shortcut to get fresh data, but we could also just call renderTab if we had data cached
+        App.refresh(); 
+    });
   },
 
   async clearChat(projectId) {
@@ -189,8 +202,7 @@ const ProjectDetailPage = {
 
     try {
       await API.sendAIChat('project', projectId, content);
-      // Socket will broadcast the messages, just refresh
-      setTimeout(() => App.refresh(), 500);
+      // UX: No need for setTimeout, Socket will broadcast the message
     } catch (e) {
       Toast.error('Erro: ' + e.message);
     } finally {
@@ -202,31 +214,28 @@ const ProjectDetailPage = {
     }
   },
 
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  },
-
-  formatMarkdown(text) {
-    if (!text) return '';
-    // Basic markdown formatting
-    return text
-      .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre style="background:var(--bg-primary);padding:10px;border-radius:8px;margin:8px 0;overflow-x:auto;font-family:JetBrains Mono,monospace;font-size:12px"><code>$2</code></pre>')
-      .replace(/`([^`]+)`/g, '<code style="background:var(--bg-primary);padding:2px 6px;border-radius:4px;font-size:12px">$1</code>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n/g, '<br>');
-  },
+  // Using global escapeHtml and formatMarkdown from app.js
+  
 
   async toggleCheckItem(projectId, phaseIdx, itemIdx, checked) {
+    if (this._toggling) return;
+    this._toggling = true;
     try {
       const project = await API.getProject(projectId);
       const roadmap = JSON.parse(project.roadmap || '[]');
       if (roadmap[phaseIdx] && roadmap[phaseIdx].items[itemIdx]) {
         roadmap[phaseIdx].items[itemIdx].done = checked;
         await API.updateProject(projectId, { roadmap });
+        // Optionally update UI locally before refresh to feel instant
+        const itemEl = event.target.closest('.checklist-item');
+        if (itemEl) itemEl.classList.toggle('done', checked);
       }
-    } catch (e) { Toast.error(e.message); }
+    } catch (e) { 
+      Toast.error(e.message); 
+      App.refresh(); // Sync back on error
+    } finally {
+      this._toggling = false;
+    }
   },
 
   addPhase(projectId) {

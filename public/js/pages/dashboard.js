@@ -132,8 +132,8 @@ const DashboardPage = {
                   <div class="agent-status-item" onclick="App.navigate('/agents/${a.id}')">
                     <span class="agent-avatar" style="width:36px;height:36px;font-size:18px">${a.avatar_emoji || '🤖'}</span>
                     <div class="agent-status-info">
-                      <div class="agent-name" style="font-size:14px">${a.name}</div>
-                      <div style="font-size:11px;color:var(--text-muted)">${a.role || 'Sem cargo'} · ${a.active_tasks || 0} tarefa(s)</div>
+                      <div class="agent-name" style="font-size:14px">${escapeHtml(a.name)}</div>
+                      <div style="font-size:11px;color:var(--text-muted)">${escapeHtml(a.role || 'Sem cargo')} · ${a.active_tasks || 0} tarefa(s)</div>
                     </div>
                     <span class="status-badge ${a.status}"><span class="dot"></span>${a.status === 'active' ? 'Online' : a.status}</span>
                     ${a.error_count > 0 ? `<span class="priority-badge urgent" style="margin-left:4px">${a.error_count} ❌</span>` : ''}
@@ -172,8 +172,8 @@ const DashboardPage = {
                 <div class="activity-item" onclick="${m.context_type ? `App.navigate('/${m.context_type}s/${m.context_id}')` : ''}">
                   <span class="emoji">${m.role === 'user' ? '👤' : m.agent_emoji || '🤖'}</span>
                   <div class="text">
-                    <span style="font-weight:500">${m.role === 'user' ? 'Você' : (m.agent_name || 'Sistema')}</span>
-                    <span style="opacity:0.7"> — ${truncate(m.content?.replace(/\n/g, ' '), 80)}</span>
+                    <span style="font-weight:500">${m.role === 'user' ? 'Você' : escapeHtml(m.agent_name || 'Sistema')}</span>
+                    <span style="opacity:0.7"> — ${escapeHtml(truncate(m.content?.replace(/\n/g, ' '), 80))}</span>
                   </div>
                   <div class="time">${timeAgo(m.created_at)}</div>
                 </div>
@@ -199,10 +199,12 @@ const DashboardPage = {
     try {
       await API.sendAIChat('agent', parseInt(agentId), msg, parseInt(agentId));
       Toast.success('Comando enviado! Verifique o chat do agente.');
-      input.disabled = false;
+      input.value = ''; // Ensure it's cleared again after success
     } catch(e) {
       Toast.error('Erro: ' + e.message);
+    } finally {
       input.disabled = false;
+      input.focus();
     }
   }
 };
