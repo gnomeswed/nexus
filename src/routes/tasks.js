@@ -51,13 +51,38 @@ router.get('/:id', (req, res) => {
   `).all(req.params.id);
 
   // Messages for this task
-  task.messages = db.prepare(`
+  const messages = db.prepare(`
     SELECT m.*, a.name as agent_name, a.avatar_emoji as agent_emoji
     FROM messages m
     LEFT JOIN agents a ON m.agent_id = a.id
     WHERE m.context_type = 'task' AND m.context_id = ?
     ORDER BY m.created_at ASC
   `).all(req.params.id);
+
+  task.messages = messages;
+
+  // Extract files modified/created in this task from tool calls
+  const filesMap = new Map();
+  messages.forEach(m => {
+    if (m.role === 'assistant' && m.metadata) {
+      try {
+        const meta = JSON.parse(m.metadata);
+        (meta.tool_calls || []).forEach(tc => {
+          if (tc.function.name === 'create_file' || tc.function.name === 'edit_file') {
+            const args = JSON.parse(tc.function.arguments);
+            if (args.path) {
+              filesMap.set(args.path, {
+                path: args.path,
+                last_op: tc.function.name,
+                updated_at: m.created_at
+              });
+            }
+          }
+        });
+      } catch (e) {}
+    }
+  });
+  task.files = Array.from(filesMap.values());
 
   res.json(task);
 });

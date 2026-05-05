@@ -165,6 +165,20 @@ function runMigrations(db) {
   safeAlter("ALTER TABLE messages ADD COLUMN is_summary INTEGER DEFAULT 0");
   safeAlter("ALTER TABLE messages ADD COLUMN archived INTEGER DEFAULT 0");
   safeAlter("ALTER TABLE tasks ADD COLUMN tags TEXT DEFAULT '[]'");
+
+  // AI Health monitoring table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS ai_failures (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      agent_id INTEGER,
+      context_type TEXT,
+      context_id INTEGER,
+      model TEXT NOT NULL,
+      error_message TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE SET NULL
+    );
+  `);
 }
 
 module.exports = { initDatabase };

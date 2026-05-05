@@ -50,6 +50,19 @@ const TaskDetailPage = {
               <h3 style="margin-bottom:12px;font-size:15px;display:flex;align-items:center;gap:8px">📝 <span>Descrição do Projeto</span></h3>
               <p style="color:var(--text-secondary);font-size:14px;line-height:1.6">${escapeHtml(task.description || 'Sem descrição')}</p>
             </div>
+            ${task.files && task.files.length > 0 ? `
+              <div class="card">
+                <h3 style="margin-bottom:12px;font-size:15px;display:flex;align-items:center;gap:8px">📂 <span>Arquivos Gerados</span></h3>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  ${task.files.map(f => `
+                    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg-lighter);padding:8px 12px;border-radius:8px;border:1px solid var(--border)">
+                      <div style="font-family:'JetBrains Mono', monospace;font-size:12px;color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%">${f.path}</div>
+                      <div style="font-size:10px;color:var(--text-muted);white-space:nowrap">${f.last_op === 'create_file' ? 'Criado' : 'Editado'} · ${timeAgo(f.updated_at)}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
             <div class="card" style="display:flex;flex-direction:column;flex:1">
               <h3 style="margin-bottom:0;font-size:15px;display:flex;justify-content:space-between;align-items:center;padding-bottom:12px">
                 <span>📋 Subtasks & Roadmap</span>
