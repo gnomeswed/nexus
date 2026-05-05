@@ -90,7 +90,7 @@ const TaskDetailPage = {
                 ${initialStatus}
               </div>
             </div>
-            <div class="card" style="height:500px;display:flex;flex-direction:column;padding:0;overflow:hidden">
+            <div class="card" style="min-height:400px; height:60vh; max-height:800px; display:flex; flex-direction:column; padding:0; overflow:hidden">
               <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:15px;font-weight:600">💬 Chat da Tarefa</div>
               <div class="chat-messages" id="task-chat-messages">
                 ${messages.length === 0 ? '<div class="empty-state-text" style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px">Converse com o agente responsável</div>' : ''}
