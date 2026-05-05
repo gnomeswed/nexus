@@ -86,6 +86,8 @@ const App = {
         html = await TasksPage.render();
       } else if (hash.match(/^\/tasks\/(\d+)$/)) {
         html = await TaskDetailPage.render(hash.match(/^\/tasks\/(\d+)$/)[1]);
+      } else if (hash === '/reviews') {
+        html = await ReviewsPage.render();
       } else if (hash === '/settings') {
         html = await SettingsPage.render();
       } else {
@@ -118,6 +120,14 @@ const App = {
       if (ac) ac.textContent = stats.agents?.total || 0;
       if (pc) pc.textContent = stats.projects?.total || 0;
       if (tc) tc.textContent = stats.tasks?.pending || 0;
+
+      // Reviews count
+      const rc = document.getElementById('reviews-count');
+      if (rc) {
+        const count = stats.tasks?.review || 0;
+        rc.textContent = count;
+        rc.style.display = count > 0 ? '' : 'none';
+      }
 
       // Update notification dot
       const dot = document.getElementById('notif-dot');

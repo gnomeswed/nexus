@@ -13,7 +13,7 @@ const DashboardPage = {
     // Build alerts
     let alertsHtml = '';
     if (a.urgentTasks > 0) alertsHtml += `<div class="alert-item alert-danger" onclick="App.navigate('/tasks')">🚨 <strong>${a.urgentTasks}</strong> tarefa(s) urgente(s) pendente(s)</div>`;
-    if (a.reviewPending > 0) alertsHtml += `<div class="alert-item alert-warning" onclick="App.navigate('/tasks')">📋 <strong>${a.reviewPending}</strong> tarefa(s) aguardando revisão</div>`;
+    if (a.reviewPending > 0) alertsHtml += `<div class="alert-item alert-warning" onclick="App.navigate('/reviews')">📋 <strong>${a.reviewPending}</strong> tarefa(s) aguardando revisão</div>`;
     if (a.errorAgents?.length > 0) alertsHtml += a.errorAgents.map(ag => `<div class="alert-item alert-danger" onclick="App.navigate('/agents/${ag.id}')">❌ ${ag.avatar_emoji} <strong>${ag.name}</strong> tem ${ag.error_count} erro(s)</div>`).join('');
     if (a.staleTasks?.length > 0) alertsHtml += a.staleTasks.map(st => `<div class="alert-item alert-warning" onclick="App.navigate('/tasks/${st.id}')">⏳ <strong>${st.title}</strong> parada há mais de 2h</div>`).join('');
 
