@@ -257,33 +257,60 @@ const ProjectDetailPage = {
     } catch (e) { Toast.error(e.message); }
   },
 
-  editProject(id) {
-    API.getProject(id).then(project => {
-      Modal.show(`
-        <div class="modal-header"><h2>✏️ Editar Projeto</h2><button class="modal-close" onclick="Modal.close()">×</button></div>
-        <div class="modal-body">
-          <div class="form-group"><label class="form-label">Nome</label><input class="form-input" id="edit-proj-name" value="${escapeHtml(project.name)}"></div>
-          <div class="form-group"><label class="form-label">Descrição</label><textarea class="form-textarea" id="edit-proj-desc" rows="3">${escapeHtml(project.description || '')}</textarea></div>
-          <div class="form-group"><label class="form-label">Status</label>
-            <select class="form-select" id="edit-proj-status">
-              ${['planning','in_progress','review','completed','archived'].map(s => `<option value="${s}" ${project.status === s ? 'selected' : ''}>${s}</option>`).join('')}
-            </select>
+  async editProject(id) {
+    let project, agents = [];
+    try {
+      project = await API.getProject(id);
+      agents = await API.getAgents();
+    } catch(e) { return Toast.error(e.message); }
+
+    const assignedIds = (project.agents || []).map(a => a.id);
+
+    Modal.show(`
+      <div class="modal-header"><h2>✏️ Editar Projeto</h2><button class="modal-close" onclick="Modal.close()">×</button></div>
+      <div class="modal-body">
+        <div class="form-group"><label class="form-label">Nome</label><input class="form-input" id="edit-proj-name" value="${escapeHtml(project.name)}"></div>
+        <div class="form-group"><label class="form-label">Descrição</label><textarea class="form-textarea" id="edit-proj-desc" rows="3">${escapeHtml(project.description || '')}</textarea></div>
+        <div class="form-group"><label class="form-label">Status</label>
+          <select class="form-select" id="edit-proj-status">
+            ${['planning','in_progress','review','completed','archived'].map(s => `<option value="${s}" ${project.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Agentes do Projeto <span style="font-weight:400;color:var(--text-muted)">(primeiro selecionado = líder)</span></label>
+          <div id="edit-proj-agents" class="agent-checklist">
+            ${agents.length === 0 ? '<div style="color:var(--text-muted);font-size:13px">Nenhum agente cadastrado</div>' :
+              agents.map(a => `
+                <label class="agent-check-item">
+                  <input type="checkbox" value="${a.id}" ${assignedIds.includes(a.id) ? 'checked' : ''}>
+                  <span class="agent-avatar" style="width:32px;height:32px;font-size:16px">${a.avatar_emoji || '🤖'}</span>
+                  <div>
+                    <div style="font-size:13px;font-weight:500">${a.name}</div>
+                    <div style="font-size:11px;color:var(--text-muted)">${a.role || a.provider}</div>
+                  </div>
+                  <span class="status-badge ${a.status}" style="margin-left:auto;font-size:11px"><span class="dot"></span>${a.status}</span>
+                </label>
+              `).join('')}
           </div>
         </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" onclick="Modal.close()">Cancelar</button>
-          <button class="btn btn-primary" onclick="ProjectDetailPage.saveEdit(${id})">Salvar</button>
-        </div>
-      `);
-    });
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="Modal.close()">Cancelar</button>
+        <button class="btn btn-primary" onclick="ProjectDetailPage.saveEdit(${id})">Salvar Mudanças</button>
+      </div>
+    `);
   },
 
   async saveEdit(id) {
+    const agentCheckboxes = document.querySelectorAll('#edit-proj-agents input[type="checkbox"]:checked');
+    const agent_ids = Array.from(agentCheckboxes).map(c => parseInt(c.value));
+
     try {
       await API.updateProject(id, {
         name: document.getElementById('edit-proj-name').value.trim(),
         description: document.getElementById('edit-proj-desc').value,
-        status: document.getElementById('edit-proj-status').value
+        status: document.getElementById('edit-proj-status').value,
+        agent_ids
       });
       Modal.close();
       Toast.success('Projeto atualizado!');

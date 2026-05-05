@@ -26,6 +26,37 @@ const App = {
       if (t?.status === 'review_pending') this.notify(`📋 Tarefa aguardando revisão`, 'info');
     });
     Socket.on('reminder:fire', (r) => this.notify(`⏰ ${r.title}`, 'warning'));
+
+    // Notification bell click
+    const notifBtn = document.getElementById('notif-btn');
+    if (notifBtn) notifBtn.onclick = () => this.showNotifications();
+  },
+
+  async showNotifications() {
+    try {
+      const stats = await API.getStats();
+      const a = stats.alerts || {};
+      let items = [];
+      if (a.urgentTasks > 0) items.push(`🚨 ${a.urgentTasks} tarefa(s) urgente(s)`);
+      if (a.reviewPending > 0) items.push(`📋 ${a.reviewPending} aguardando revisão`);
+      (a.errorAgents || []).forEach(ag => items.push(`❌ ${ag.avatar_emoji} ${ag.name}: ${ag.error_count} erro(s)`));
+      (a.staleTasks || []).forEach(st => items.push(`⏳ "${st.title}" parada há 2h+`));
+
+      if (items.length === 0) items.push('✅ Nenhum alerta no momento');
+
+      Modal.show(`
+        <div class="modal-header"><h2>🔔 Notificações</h2><button class="modal-close" onclick="Modal.close()">×</button></div>
+        <div class="modal-body">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${items.map(i => `<div class="activity-item"><div class="text" style="font-size:14px">${i}</div></div>`).join('')}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="Modal.close()">Fechar</button>
+          <button class="btn btn-primary" onclick="Modal.close();App.navigate('/tasks')">Ver Tarefas</button>
+        </div>
+      `);
+    } catch(e) { Toast.error(e.message); }
   },
 
   async route() {

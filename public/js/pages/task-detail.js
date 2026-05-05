@@ -199,10 +199,23 @@ const TaskDetailPage = {
             </div>
             <div class="form-group">
               <label class="form-label">Agente Responsável</label>
-              <select class="form-select" id="edit-task-agent">
-                <option value="">Sem agente</option>
-                ${agents.map(a => `<option value="${a.id}" ${task.agent_id === a.id ? 'selected' : ''}>${a.avatar_emoji} ${a.name}</option>`).join('')}
-              </select>
+              <div id="edit-task-agents" class="agent-checklist" style="max-height:160px">
+                <label class="agent-check-item">
+                  <input type="radio" name="task-agent" value="" ${!task.agent_id ? 'checked' : ''}>
+                  <span style="font-size:13px;color:var(--text-muted)">Sem agente</span>
+                </label>
+                ${agents.map(a => `
+                  <label class="agent-check-item">
+                    <input type="radio" name="task-agent" value="${a.id}" ${task.agent_id === a.id ? 'checked' : ''}>
+                    <span class="agent-avatar" style="width:28px;height:28px;font-size:14px">${a.avatar_emoji || '🤖'}</span>
+                    <div>
+                      <div style="font-size:13px;font-weight:500">${a.name}</div>
+                      <div style="font-size:11px;color:var(--text-muted)">${a.role || ''}</div>
+                    </div>
+                    <span class="status-badge ${a.status}" style="margin-left:auto;font-size:10px"><span class="dot"></span>${a.status}</span>
+                  </label>
+                `).join('')}
+              </div>
             </div>
           </div>
           <div class="form-row">
@@ -228,12 +241,13 @@ const TaskDetailPage = {
   async saveEdit(id) {
     const title = document.getElementById('edit-task-title').value.trim();
     if (!title) return Toast.error('Título é obrigatório');
+    const selectedAgent = document.querySelector('input[name="task-agent"]:checked');
     try {
       await API.updateTask(id, {
         title,
         description: document.getElementById('edit-task-desc').value,
         project_id: document.getElementById('edit-task-project').value || null,
-        agent_id: document.getElementById('edit-task-agent').value || null,
+        agent_id: selectedAgent?.value || null,
         priority: document.getElementById('edit-task-priority').value
       });
       Modal.close();
