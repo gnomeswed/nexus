@@ -46,6 +46,9 @@ class FileManager {
       return { success: false, message: `File not found: ${relativePath}` };
     }
     const stat = fs.statSync(fullPath);
+    if (stat.isDirectory()) {
+      return { success: false, message: `O caminho "${relativePath}" é um diretório. Use a ferramenta de listagem de arquivos para ver o que há dentro.` };
+    }
     if (stat.size > 500000) {
       return { success: false, message: `File too large (${stat.size} bytes). Max 500KB.` };
     }
@@ -58,8 +61,9 @@ class FileManager {
    */
   editFile(projectFolder, relativePath, search, replace) {
     const fullPath = this.resolveSafe(projectFolder, relativePath);
-    if (!fs.existsSync(fullPath)) {
-      return { success: false, message: `File not found: ${relativePath}` };
+    const stat = fs.statSync(fullPath);
+    if (stat.isDirectory()) {
+      return { success: false, message: `O caminho "${relativePath}" é um diretório. Você não pode editar um diretório como se fosse um arquivo.` };
     }
     let content = fs.readFileSync(fullPath, 'utf-8');
     if (!content.includes(search)) {
