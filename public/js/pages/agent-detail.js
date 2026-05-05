@@ -13,8 +13,8 @@ const AgentDetailPage = {
         <div style="display:flex;align-items:center;gap:14px">
           <button class="btn btn-secondary btn-icon" onclick="App.navigate('/agents')">←</button>
           <div>
-            <h1>${agent.avatar_emoji} ${agent.name}</h1>
-            <div class="subtitle">${agent.role || 'Sem cargo definido'}</div>
+            <h1>${agent.avatar_emoji} ${escapeHtml(agent.name)}</h1>
+            <div class="subtitle">${escapeHtml(agent.role || 'Sem cargo definido')}</div>
           </div>
           <span class="status-badge ${agent.status}" style="margin-left:12px"><span class="dot"></span>${agent.status}</span>
           ${agent.error_count > 0 ? `<span class="status-badge offline" style="margin-left:8px">❌ ${agent.error_count} Erros</span>` : ''}
@@ -33,7 +33,7 @@ const AgentDetailPage = {
               <h3 style="margin-bottom:16px;font-size:15px">📝 Informações</h3>
               <div class="form-group">
                 <label class="form-label">Nome</label>
-                <input class="form-input" id="ed-name" value="${agent.name}">
+                <input class="form-input" id="ed-name" value="${escapeHtml(agent.name)}">
               </div>
               <div class="form-row">
                 <div class="form-group">

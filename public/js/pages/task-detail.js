@@ -25,7 +25,7 @@ const TaskDetailPage = {
         <div style="display:flex;align-items:center;gap:14px">
           <button class="btn btn-secondary btn-icon" onclick="App.navigate('/tasks')">←</button>
           <div>
-            <h1>✅ ${this.escapeHtml(task.title)}</h1>
+            <h1>✅ ${escapeHtml(task.title)}</h1>
             <div class="subtitle">${task.project_name ? '📁 ' + task.project_name : 'Tarefa avulsa'} · ${task.agent_name ? task.agent_emoji + ' ' + task.agent_name : 'Sem agente'}</div>
           </div>
           <span class="status-badge ${task.status}"><span class="dot"></span>${task.status}</span>
@@ -48,7 +48,7 @@ const TaskDetailPage = {
           <div style="display:flex;flex-direction:column;gap:16px">
             <div class="card">
               <h3 style="margin-bottom:12px;font-size:15px;display:flex;align-items:center;gap:8px">📝 <span>Descrição do Projeto</span></h3>
-              <p style="color:var(--text-secondary);font-size:14px;line-height:1.6">${this.escapeHtml(task.description || 'Sem descrição')}</p>
+              <p style="color:var(--text-secondary);font-size:14px;line-height:1.6">${escapeHtml(task.description || 'Sem descrição')}</p>
             </div>
             <div class="card" style="display:flex;flex-direction:column;flex:1">
               <h3 style="margin-bottom:0;font-size:15px;display:flex;justify-content:space-between;align-items:center;padding-bottom:12px">
@@ -71,7 +71,7 @@ const TaskDetailPage = {
                     </div>
                     <input type="checkbox" ${item.done ? 'checked' : ''} onchange="TaskDetailPage.toggleCheck(${id},${i},this.checked)" style="margin-top:3px;accent-color:var(--primary);cursor:pointer;width:15px;height:15px;flex-shrink:0">
                     <div style="flex:1;min-width:0">
-                      <span style="font-size:13px;line-height:1.5;color:${item.done ? 'var(--text-muted)' : 'var(--text)'};text-decoration:${item.done ? 'line-through' : 'none'};transition:all 0.2s;display:block">${this.escapeHtml(item.text)}</span>
+                      <span style="font-size:13px;line-height:1.5;color:${item.done ? 'var(--text-muted)' : 'var(--text)'};text-decoration:${item.done ? 'line-through' : 'none'};transition:all 0.2s;display:block">${escapeHtml(item.text)}</span>
                       ${item.created_at ? `<div style="font-size:10px;color:var(--text-muted);margin-top:3px;opacity:0.7">${item.created_by || '?'} · ${item.created_at}</div>` : ''}
                     </div>
                   </div>
@@ -120,7 +120,7 @@ const TaskDetailPage = {
                       <span>${m.role === 'user' ? '👤 Você/Sistema' : (m.agent_emoji || '🤖') + ' ' + (m.agent_name || 'Agente')}</span>
                       <span class="chat-time">${formatTime(m.created_at)}</span>
                     </div>
-                    ${ProjectDetailPage && ProjectDetailPage.formatMarkdown ? ProjectDetailPage.formatMarkdown(m.content) : m.content}
+                    ${formatMarkdown(escapeHtml(m.content))}
                     ${actionsHtml}
                   </div>
                   `;
@@ -243,11 +243,11 @@ const TaskDetailPage = {
         <div class="modal-body">
           <div class="form-group">
             <label class="form-label">Título</label>
-            <input class="form-input" id="edit-task-title" value="${this.escapeHtml(task.title)}">
+            <input class="form-input" id="edit-task-title" value="${escapeHtml(task.title)}">
           </div>
           <div class="form-group">
             <label class="form-label">Descrição</label>
-            <textarea class="form-textarea" id="edit-task-desc" rows="3">${this.escapeHtml(task.description || '')}</textarea>
+            <textarea class="form-textarea" id="edit-task-desc" rows="3">${escapeHtml(task.description || '')}</textarea>
           </div>
           <div class="form-row">
             <div class="form-group">

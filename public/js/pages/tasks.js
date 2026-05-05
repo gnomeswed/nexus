@@ -26,9 +26,9 @@ const TasksPage = {
               <div class="activity-item" style="cursor:pointer" onclick="App.navigate('/tasks/${t.id}')">
                 <span class="emoji">${t.agent_emoji || '✅'}</span>
                 <div style="flex:1">
-                  <div style="font-size:14px;font-weight:500">${t.title}</div>
+                  <div style="font-size:14px;font-weight:500">${escapeHtml(t.title)}</div>
                   <div style="font-size:12px;color:var(--text-muted)">
-                    ${t.project_name ? '📁 ' + t.project_name + ' · ' : ''}${t.agent_name || 'Sem agente'}${t.agent_count > 1 ? ` + ${t.agent_count - 1}` : ''}
+                    ${t.project_name ? '📁 ' + escapeHtml(t.project_name) + ' · ' : ''}${escapeHtml(t.agent_name || 'Sem agente')}${t.agent_count > 1 ? ` + ${t.agent_count - 1}` : ''}
                   </div>
                 </div>
                 <span class="priority-badge ${t.priority}">${t.priority}</span>
