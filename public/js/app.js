@@ -324,6 +324,12 @@ function timeAgo(date) {
   return `${Math.floor(diff / 86400)}d`;
 }
 
+function formatTime(date) {
+  if (!date) return '';
+  const d = new Date(date + (date.includes('Z') ? '' : 'Z'));
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 function escapeHtml(text) {
   if (!text) return '';
   const div = document.createElement('div');

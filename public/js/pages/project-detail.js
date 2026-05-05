@@ -131,7 +131,10 @@ const ProjectDetailPage = {
           ${messages.length === 0 ? '<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-muted)">Inicie a conversa com seus agentes</div>' : ''}
           ${messages.map(m => `
             <div class="chat-bubble ${m.role}">
-              <div class="sender">${m.role === 'user' ? '👤 Você' : (m.agent_emoji || '🤖') + ' ' + (m.agent_name || 'Sistema')}</div>
+              <div class="sender">
+                <span>${m.role === 'user' ? '👤 Você' : (m.agent_emoji || '🤖') + ' ' + (m.agent_name || 'Sistema')}</span>
+                <span class="chat-time">${formatTime(m.created_at)}</span>
+              </div>
               ${formatMarkdown(escapeHtml(m.content))}
             </div>
           `).join('')}

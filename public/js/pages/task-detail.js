@@ -108,7 +108,10 @@ const TaskDetailPage = {
                   }
                   return `
                   <div class="chat-bubble ${m.role}">
-                    <div class="sender">${m.role === 'user' ? '👤 Você/Sistema' : (m.agent_emoji || '🤖') + ' ' + (m.agent_name || 'Agente')}</div>
+                    <div class="sender">
+                      <span>${m.role === 'user' ? '👤 Você/Sistema' : (m.agent_emoji || '🤖') + ' ' + (m.agent_name || 'Agente')}</span>
+                      <span class="chat-time">${formatTime(m.created_at)}</span>
+                    </div>
                     ${ProjectDetailPage && ProjectDetailPage.formatMarkdown ? ProjectDetailPage.formatMarkdown(m.content) : m.content}
                     ${actionsHtml}
                   </div>
@@ -154,8 +157,17 @@ const TaskDetailPage = {
       }
 
       const senderName = msg.role === 'user' ? '👤 Você/Sistema' : (msg.agent_emoji || '🤖') + ' ' + (msg.agent_name || 'Agente');
-      
-      chatArea.innerHTML += `<div class="chat-bubble ${msg.role}"><div class="sender">${senderName}</div>${ProjectDetailPage && ProjectDetailPage.formatMarkdown ? ProjectDetailPage.formatMarkdown(msg.content) : msg.content}${actionsHtml}</div>`;
+      const newMsg = document.createElement('div');
+      newMsg.className = `chat-bubble ${msg.role}`;
+      newMsg.innerHTML = `
+        <div class="sender">
+          <span>${senderName}</span>
+          <span class="chat-time">${formatTime(msg.created_at || new Date().toISOString())}</span>
+        </div>
+        ${ProjectDetailPage && ProjectDetailPage.formatMarkdown ? ProjectDetailPage.formatMarkdown(msg.content) : msg.content}
+        ${actionsHtml}
+      `;
+      chatArea.appendChild(newMsg);
       chatArea.scrollTop = chatArea.scrollHeight;
     });
 
