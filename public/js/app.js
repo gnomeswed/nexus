@@ -17,6 +17,10 @@ const App = {
     
     // Global notification listeners
     this.setupGlobalListeners();
+
+    // Notification bell click
+    const notifBtn = document.getElementById('notif-btn');
+    if (notifBtn) notifBtn.onclick = () => this.showNotifications();
   },
 
   setupGlobalListeners() {
@@ -31,11 +35,6 @@ const App = {
       if (t?.status === 'review_pending') this.notify(`📋 Tarefa aguardando revisão`, 'info');
     });
     Socket.on('reminder:fire', (r) => this.notify(`⏰ ${r.title}`, 'warning'));
-  },
-
-    // Notification bell click
-    const notifBtn = document.getElementById('notif-btn');
-    if (notifBtn) notifBtn.onclick = () => this.showNotifications();
   },
 
   async showNotifications() {
