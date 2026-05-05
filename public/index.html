@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,42 +17,71 @@
           <div class="logo-icon">🔮</div>
           <span class="logo-text">NEXUS OS</span>
         </a>
+        <button class="sidebar-toggle" id="sidebar-collapse" title="Recolher menu">☰</button>
       </div>
       <nav class="sidebar-nav">
         <div class="nav-section">
           <div class="nav-section-title">Menu</div>
           <a href="#/" class="nav-item" data-nav data-page="dashboard">
-            <span class="icon">📊</span> Dashboard
+            <span class="icon">📊</span> <span class="nav-label">Dashboard</span>
           </a>
           <a href="#/agents" class="nav-item" data-nav data-page="agents">
-            <span class="icon">🤖</span> Agentes
+            <span class="icon">🤖</span> <span class="nav-label">Agentes</span>
             <span class="badge" id="agents-count">0</span>
           </a>
           <a href="#/projects" class="nav-item" data-nav data-page="projects">
-            <span class="icon">📁</span> Projetos
+            <span class="icon">📁</span> <span class="nav-label">Projetos</span>
             <span class="badge" id="projects-count">0</span>
           </a>
           <a href="#/tasks" class="nav-item" data-nav data-page="tasks">
-            <span class="icon">✅</span> Tarefas
+            <span class="icon">✅</span> <span class="nav-label">Tarefas</span>
             <span class="badge" id="tasks-count">0</span>
           </a>
         </div>
         <div class="nav-section">
           <div class="nav-section-title">Sistema</div>
           <a href="#/settings" class="nav-item" data-nav data-page="settings">
-            <span class="icon">⚙️</span> Configurações
+            <span class="icon">⚙️</span> <span class="nav-label">Configurações</span>
           </a>
         </div>
       </nav>
-      <div style="padding:16px 20px; border-top:1px solid var(--border);">
-        <div style="font-size:11px; color:var(--text-muted);">Nexus OS v1.0</div>
+      <div class="sidebar-footer">
+        <button class="theme-toggle" id="theme-toggle" title="Alternar tema">🌙</button>
+        <div class="version-text">Nexus OS v1.4.2</div>
       </div>
     </aside>
 
+    <!-- Mobile overlay -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
     <!-- Main Content -->
     <main class="main-content" id="main-content">
+      <div class="topbar" id="topbar">
+        <button class="btn btn-icon mobile-menu" id="mobile-menu-btn">☰</button>
+        <div class="topbar-search" id="topbar-search">
+          <span class="search-icon">🔍</span>
+          <input type="text" placeholder="Buscar... (Ctrl+K)" id="global-search-input" autocomplete="off">
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-icon" id="notif-btn" title="Notificações">🔔<span class="notif-dot" id="notif-dot" style="display:none"></span></button>
+        </div>
+      </div>
       <div id="page-container"></div>
     </main>
+  </div>
+
+  <!-- Search Modal -->
+  <div class="search-overlay" id="search-overlay">
+    <div class="search-modal">
+      <div class="search-modal-input">
+        <span>🔍</span>
+        <input type="text" id="search-modal-input" placeholder="Buscar agentes, projetos, tarefas, mensagens..." autocomplete="off">
+        <kbd>ESC</kbd>
+      </div>
+      <div class="search-results" id="search-results">
+        <div class="search-empty">Digite para buscar...</div>
+      </div>
+    </div>
   </div>
 
   <!-- Modal Container -->

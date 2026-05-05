@@ -5,7 +5,6 @@ const fs = require('fs');
 function initDatabase() {
   const dbPath = path.resolve(process.env.DB_PATH || './data/nexus.db');
   
-  // Create directory if it doesn't exist
   const dbDir = path.dirname(dbPath);
   if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
@@ -13,12 +12,12 @@ function initDatabase() {
 
   const db = new Database(dbPath);
 
-  // Performance optimizations for SQLite
+  // Performance optimizations
   db.pragma('journal_mode = WAL');
   db.pragma('synchronous = NORMAL');
   db.pragma('foreign_keys = ON');
+  db.pragma('cache_size = -8000'); // 8MB cache
 
-  // Run migrations
   runMigrations(db);
 
   return db;
@@ -68,6 +67,7 @@ function runMigrations(db) {
       status TEXT DEFAULT 'pending' CHECK(status IN ('pending','in_progress','review_pending','completed','cancelled')),
       priority TEXT DEFAULT 'medium' CHECK(priority IN ('low','medium','high','urgent')),
       checklist TEXT DEFAULT '[]',
+      tags TEXT DEFAULT '[]',
       due_date DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -114,37 +114,47 @@ function runMigrations(db) {
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
     );
 
+    -- Usage log for token tracking
+    CREATE TABLE IF NOT EXISTS usage_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      agent_id INTEGER,
+      context_type TEXT,
+      context_id INTEGER,
+      model TEXT DEFAULT '',
+      prompt_tokens INTEGER DEFAULT 0,
+      completion_tokens INTEGER DEFAULT 0,
+      total_tokens INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE SET NULL
+    );
+
     -- Indexes for performance
     CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
     CREATE INDEX IF NOT EXISTS idx_tasks_agent ON tasks(agent_id);
     CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+    CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);
+    CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);
+    CREATE INDEX IF NOT EXISTS idx_tasks_created ON tasks(created_at);
     CREATE INDEX IF NOT EXISTS idx_messages_context ON messages(context_type, context_id);
     CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at);
+    CREATE INDEX IF NOT EXISTS idx_messages_agent ON messages(agent_id);
+    CREATE INDEX IF NOT EXISTS idx_messages_role ON messages(role);
     CREATE INDEX IF NOT EXISTS idx_project_agents_project ON project_agents(project_id);
     CREATE INDEX IF NOT EXISTS idx_project_agents_agent ON project_agents(agent_id);
-    CREATE INDEX IF NOT EXISTS idx_memories_content ON memories(content);
+    CREATE INDEX IF NOT EXISTS idx_memories_agent ON memories(agent_id);
+    CREATE INDEX IF NOT EXISTS idx_memories_project ON memories(project_id);
+    CREATE INDEX IF NOT EXISTS idx_memories_category ON memories(category);
+    CREATE INDEX IF NOT EXISTS idx_usage_agent ON usage_log(agent_id);
+    CREATE INDEX IF NOT EXISTS idx_usage_created ON usage_log(created_at);
+    CREATE INDEX IF NOT EXISTS idx_usage_model ON usage_log(model);
   `);
 
-  // Migration: Add is_summary and archived to messages if they don't exist
-  try {
-    db.prepare("ALTER TABLE messages ADD COLUMN is_summary INTEGER DEFAULT 0").run();
-  } catch (e) {
-    // Column already exists
-  }
-  try {
-    db.prepare("ALTER TABLE messages ADD COLUMN archived INTEGER DEFAULT 0").run();
-  } catch (e) {
-    // Column already exists
-  }
-
-  // Migration: Remove/Update tasks status check by recreating or simply ignoring if possible.
-  // Since SQLite doesn't support ALTER TABLE DROP CONSTRAINT, we will create a new table if review_pending fails.
-  try {
-    db.prepare("UPDATE tasks SET status = 'pending' WHERE id = -1").run(); 
-    // This is just a test to see if the constraint is active. 
-    // The real fix for existing DBs is usually recreating the table, 
-    // but we'll try to just update the column definition in the code first.
-  } catch (e) {}
+  // Safe migrations for existing DBs
+  const safeAlter = (sql) => { try { db.prepare(sql).run(); } catch(e) {} };
+  
+  safeAlter("ALTER TABLE messages ADD COLUMN is_summary INTEGER DEFAULT 0");
+  safeAlter("ALTER TABLE messages ADD COLUMN archived INTEGER DEFAULT 0");
+  safeAlter("ALTER TABLE tasks ADD COLUMN tags TEXT DEFAULT '[]'");
 }
 
 module.exports = { initDatabase };

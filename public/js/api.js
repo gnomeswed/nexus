@@ -1,12 +1,11 @@
-// API Client for Nexus OS
+// API Client for Nexus OS (with cache layer)
 const API = {
   base: '/api',
+  _cache: new Map(),
+  _cacheTTL: 30000, // 30 seconds
 
   async request(method, path, body = null) {
-    const opts = {
-      method,
-      headers: { 'Content-Type': 'application/json' }
-    };
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
     if (body) opts.body = JSON.stringify(body);
     const res = await fetch(this.base + path, opts);
     if (!res.ok) {
@@ -16,23 +15,37 @@ const API = {
     return res.json();
   },
 
+  async cached(key, fetcher) {
+    const entry = this._cache.get(key);
+    if (entry && Date.now() - entry.ts < this._cacheTTL) return entry.data;
+    const data = await fetcher();
+    this._cache.set(key, { data, ts: Date.now() });
+    return data;
+  },
+
+  invalidate(prefix) {
+    for (const key of this._cache.keys()) {
+      if (key.startsWith(prefix)) this._cache.delete(key);
+    }
+  },
+
   // Stats
   getStats() { return this.request('GET', '/stats'); },
 
   // Agents
-  getAgents() { return this.request('GET', '/agents'); },
+  getAgents() { return this.cached('agents', () => this.request('GET', '/agents')); },
   getAgent(id) { return this.request('GET', `/agents/${id}`); },
-  createAgent(data) { return this.request('POST', '/agents', data); },
-  updateAgent(id, data) { return this.request('PUT', `/agents/${id}`, data); },
-  deleteAgent(id) { return this.request('DELETE', `/agents/${id}`); },
+  createAgent(data) { this.invalidate('agents'); return this.request('POST', '/agents', data); },
+  updateAgent(id, data) { this.invalidate('agents'); return this.request('PUT', `/agents/${id}`, data); },
+  deleteAgent(id) { this.invalidate('agents'); return this.request('DELETE', `/agents/${id}`); },
   testAgent(id) { return this.request('POST', `/agents/${id}/test`); },
 
   // Projects
-  getProjects() { return this.request('GET', '/projects'); },
+  getProjects() { return this.cached('projects', () => this.request('GET', '/projects')); },
   getProject(id) { return this.request('GET', `/projects/${id}`); },
-  createProject(data) { return this.request('POST', '/projects', data); },
-  updateProject(id, data) { return this.request('PUT', `/projects/${id}`, data); },
-  deleteProject(id) { return this.request('DELETE', `/projects/${id}`); },
+  createProject(data) { this.invalidate('projects'); return this.request('POST', '/projects', data); },
+  updateProject(id, data) { this.invalidate('projects'); return this.request('PUT', `/projects/${id}`, data); },
+  deleteProject(id) { this.invalidate('projects'); return this.request('DELETE', `/projects/${id}`); },
 
   // Tasks
   getTasks(filters = {}) {
@@ -40,26 +53,32 @@ const API = {
     return this.request('GET', `/tasks${params ? '?' + params : ''}`);
   },
   getTask(id) { return this.request('GET', `/tasks/${id}`); },
-  createTask(data) { return this.request('POST', '/tasks', data); },
-  updateTask(id, data) { return this.request('PUT', `/tasks/${id}`, data); },
-  deleteTask(id) { return this.request('DELETE', `/tasks/${id}`); },
+  createTask(data) { this.invalidate('tasks'); return this.request('POST', '/tasks', data); },
+  updateTask(id, data) { this.invalidate('tasks'); return this.request('PUT', `/tasks/${id}`, data); },
+  deleteTask(id) { this.invalidate('tasks'); return this.request('DELETE', `/tasks/${id}`); },
 
   // Chat
   getMessages(type, id) { return this.request('GET', `/chat/${type}/${id}`); },
   sendMessage(type, id, data) { return this.request('POST', `/chat/${type}/${id}`, data); },
+  deleteChat(type, id) { return this.request('DELETE', `/chat/${type}/${id}`); },
 
-  // AI Chat (triggers real AI response)
+  // AI Chat
   sendAIChat(contextType, contextId, message, agentId = null) {
-    return this.request('POST', '/ai/chat', {
-      context_type: contextType,
-      context_id: contextId,
-      message,
-      agent_id: agentId
-    });
+    return this.request('POST', '/ai/chat', { context_type: contextType, context_id: contextId, message, agent_id: agentId });
   },
 
   // Settings
   getSettings() { return this.request('GET', '/settings'); },
   updateSettings(data) { return this.request('POST', '/settings', data); },
-  testSettings() { return this.request('POST', '/settings/test'); }
+  testSettings() { return this.request('POST', '/settings/test'); },
+
+  // Search
+  search(query) { return this.request('GET', `/search?q=${encodeURIComponent(query)}`); },
+
+  // Usage
+  getUsage(range = '7d') { return this.request('GET', `/stats/usage?range=${range}`); },
+
+  // Export
+  exportProject(id) { window.open(`${this.base}/export/project/${id}`, '_blank'); },
+  exportChat(type, id) { window.open(`${this.base}/export/chat/${id}?ctx=${type}`, '_blank'); }
 };

@@ -232,6 +232,15 @@ class Orchestrator {
       // Save AI response as message
       const savedMsg = this.saveMessage(contextType, contextId, agent.id, 'assistant', cleanContent, { actions, model: response.model, usage: response.usage });
 
+      // Log token usage
+      if (response.usage) {
+        try {
+          this.db.prepare('INSERT INTO usage_log (agent_id, context_type, context_id, model, prompt_tokens, completion_tokens, total_tokens) VALUES (?,?,?,?,?,?,?)').run(
+            agent.id, contextType, contextId, response.model || '', response.usage.prompt_tokens || 0, response.usage.completion_tokens || 0, response.usage.total_tokens || 0
+          );
+        } catch(e) { console.error('[Usage Log]', e.message); }
+      }
+
       // Emit via WebSocket
       if (this.io) {
         const room = `${contextType}:${contextId}`;
@@ -427,20 +436,26 @@ class Orchestrator {
           let roadmap = [];
           try { roadmap = JSON.parse(project.roadmap || '[]'); } catch(e) {}
           
-          const pad = (n) => n.toString().padStart(2, '0');
-          const now = new Date();
-          const timestamp = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+          // FIX: Use correct roadmap format with name/items that renderRoadmap expects
+          const phaseName = args.phase || args.text;
+          const existingPhase = roadmap.find(p => p.name === phaseName);
           
-          roadmap.push({
-            title: args.text,
-            description: args.description || '',
-            status: 'pending',
-            created_at: timestamp
-          });
+          if (existingPhase && args.item) {
+            // Add item to existing phase
+            existingPhase.items = existingPhase.items || [];
+            existingPhase.items.push({ text: args.item, done: false });
+          } else {
+            // Create new phase with proper structure
+            roadmap.push({
+              name: phaseName,
+              emoji: args.emoji || '📍',
+              items: args.item ? [{ text: args.item, done: false }] : []
+            });
+          }
           
           this.db.prepare('UPDATE projects SET roadmap = ? WHERE id = ?').run(JSON.stringify(roadmap), contextId);
           if (this.io) this.io.emit('project:updated', { id: contextId, roadmap });
-          return { success: true, message: `Phase "${args.text}" added to project roadmap.` };
+          return { success: true, message: `Phase "${phaseName}" added to project roadmap.` };
         }
 
         const targetTaskId = args.task_id || (contextType === 'task' ? contextId : null);
@@ -511,7 +526,6 @@ class Orchestrator {
       if (project) {
         system += `Project: ${project.name}\nDescription: ${project.description}\nStatus: ${project.status}\nProgress: ${project.progress_percent}%\n`;
 
-        // List project files
         if (projectFolder) {
           try {
             const files = fileManager.listFiles(projectFolder);
@@ -523,23 +537,31 @@ class Orchestrator {
           } catch (e) { /* ignore */ }
         }
 
-        // Roadmap
+        // Roadmap - handle both old and new format
         const roadmap = JSON.parse(project.roadmap || '[]');
         if (roadmap.length > 0) {
           system += '\nRoadmap:\n';
           roadmap.forEach(phase => {
+            const name = phase.name || phase.title || 'Phase';
             const items = phase.items || [];
             const done = items.filter(i => i.done).length;
-            system += `  ${phase.name} (${done}/${items.length} done)\n`;
+            system += `  ${phase.emoji || '📍'} ${name} (${done}/${items.length} done)\n`;
             items.forEach(i => { system += `    [${i.done ? 'x' : ' '}] ${i.text}\n`; });
           });
         }
 
         // Tasks
-        const tasks = this.db.prepare("SELECT title, status, priority FROM tasks WHERE project_id = ?").all(contextId);
+        const tasks = this.db.prepare("SELECT id, title, status, priority, agent_id FROM tasks WHERE project_id = ?").all(contextId);
         if (tasks.length > 0) {
           system += '\nProject tasks:\n';
-          tasks.forEach(t => { system += `  [${t.status}] ${t.title} (${t.priority})\n`; });
+          tasks.forEach(t => { system += `  [${t.status}] #${t.id} ${t.title} (${t.priority})\n`; });
+        }
+
+        // Available agents for delegation
+        const agents = this.db.prepare("SELECT id, name, role FROM agents WHERE status = 'active'").all();
+        if (agents.length > 0) {
+          system += '\nAvailable agents:\n';
+          agents.forEach(a => { system += `  ID:${a.id} - ${a.name} (${a.role})\n`; });
         }
       }
     } else if (contextType === 'task') {
@@ -547,8 +569,39 @@ class Orchestrator {
       if (task) {
         system += `Task ID: ${task.id}\nTask: ${task.title}\nDescription: ${task.description}\nStatus: ${task.status}\nPriority: ${task.priority}\n`;
         if (task.project_name) system += `Project: ${task.project_name}\n`;
+        // Show checklist
+        try {
+          const cl = JSON.parse(task.checklist || '[]');
+          if (cl.length > 0) {
+            system += '\nSubtask checklist:\n';
+            cl.forEach(c => { system += `  [${c.done ? 'x' : ' '}] ${c.text}\n`; });
+          }
+        } catch(e) {}
       }
     }
+
+    // Auto-inject relevant memories
+    try {
+      const projectId = contextType === 'project' ? contextId : null;
+      const memories = this.db.prepare(`
+        SELECT title, content, category FROM memories 
+        WHERE (agent_id = ? OR agent_id IS NULL) ${projectId ? 'AND (project_id = ? OR project_id IS NULL)' : ''}
+        ORDER BY created_at DESC LIMIT 3
+      `).all(projectId ? [agent.id, projectId] : [agent.id]);
+      if (memories.length > 0) {
+        system += '\n--- LONG-TERM MEMORY ---\n';
+        memories.forEach(m => { system += `[${m.category}] ${m.title}: ${m.content.substring(0, 200)}\n`; });
+      }
+    } catch(e) {}
+
+    // Inject recent errors as lessons
+    try {
+      const errors = this.db.prepare(`SELECT content FROM messages WHERE agent_id = ? AND role = 'system' AND content LIKE '❌%' ORDER BY created_at DESC LIMIT 3`).all(agent.id);
+      if (errors.length > 0) {
+        system += '\n--- RECENT ERRORS (avoid repeating) ---\n';
+        errors.forEach(e => { system += `- ${e.content.substring(0, 150)}\n`; });
+      }
+    } catch(e) {}
 
     system += '\n--- MULTI-AGENT ORCHESTRATION PROTOCOL ---\n';
     system += 'LANGUAGE: Respond EXCLUSIVELY in Portuguese (pt-BR). This is mandatory.\n';
@@ -557,31 +610,16 @@ class Orchestrator {
     system += 'You are part of a Hierarchical Multi-Agent System (Manager -> Workers).\n\n';
     
     system += '=== IF YOU ARE A MANAGER (Lead Agent) ===\n';
-    system += '1. AUTONOMY: Your goal is to deliver the final result. DO NOT wait for the human to approve every small step. Proceed automatically until the task is complete.\n';
-    system += '2. VISUAL ROADMAP (STRICT): You MUST use the `add_subtask` tool to populate the task\'s Roadmap. NEVER just list steps in text. If it\'s not in the Roadmap tool, it doesn\'t exist.\n';
-    system += '3. DELEGATION VS EXECUTION: If there are other worker agents available, use `delegate_task`. IF YOU ARE ALONE OR NO WORKERS ARE ASSIGNED, YOU MUST EXECUTE THE WORK YOURSELF using `create_file` and `edit_file` immediately.\n';
-    system += '4. NO PROCRASTINATION: Do not say "I will now do X". Just do X using your tools.\n';
-    system += '5. REVIEW: Use `read_file` to check quality. Only ask the human for approval at the VERY END ("versão final").\n';
-    system += '6. IDIOM: Always respond in Portuguese (PT-BR). Never use English for chat.\n\n';
-    
-    system += '=== EXPLOITS & EXAMPLES ===\n';
-    system += 'User: "Mude o status para review_pending"\n';
-    system += 'Assistant: [call update_task_status(status="review_pending")] "Status atualizado para review_pending. O script está pronto para sua análise."\n\n';
-    system += 'User: "Adicione o passo de testes"\n';
-    system += 'Assistant: [call add_subtask(text="Testar funcionalidades")] "Passo de testes adicionado ao Roadmap."\n\n';
+    system += '1. AUTONOMY: Your goal is to deliver the final result. DO NOT wait for the human to approve every small step.\n';
+    system += '2. VISUAL ROADMAP (STRICT): Use `add_subtask` to populate Roadmap. NEVER just list steps in text.\n';
+    system += '3. DELEGATION VS EXECUTION: If workers available, use `delegate_task`. If alone, execute with `create_file`/`edit_file`.\n';
+    system += '4. NO PROCRASTINATION: Do not say "I will now do X". Just do X.\n';
+    system += '5. IDIOM: Always respond in Portuguese (PT-BR).\n\n';
 
-    system += '=== IF YOU ARE A WORKER (e.g. Dev/Estagiário) ===\n';
-    system += '1. EXECUTION: Write code strictly according to the task description. Use `create_file` or `edit_file`.\n';
-    system += '2. NO CODE IN CHAT: NEVER paste large code blocks in the chat. This bloats the token context.\n';
-    system += '3. COMPLETION: When you finish your work, you MUST use `update_task_status(status="review_pending")` first, then reply in chat: "Arquivo criado em [caminho]. Aguardando revisão do Gerente."\n';
-    system += '4. DO NOT COMPLETE TASKS: Only the Human or Manager can use `update_task_status` to "completed".\n\n';
-
-    system += '=== TASK RESOLUTION PROTOCOL (MANDATORY) ===\n';
-    system += '1. EXECUTION: Worker performs the task via tools.\n';
-    system += '2. REVIEW: Worker tells Manager it is ready.\n';
-    system += '3. QUALITY CHECK: Manager verifies the file using `read_file`.\n';
-    system += '4. APPROVAL: ONLY the Human (or the Manager after Human approval) can use update_task_status to set it to "completed".\n';
-    system += 'CRITICAL: Never change a task to "completed" without explicit Human approval saying "aprovado".\n\n';
+    system += '=== IF YOU ARE A WORKER ===\n';
+    system += '1. Write code via `create_file`/`edit_file`. NO CODE IN CHAT.\n';
+    system += '2. When done: `update_task_status(status="review_pending")` then report.\n';
+    system += '3. Only Human can set "completed".\n\n';
     
     system += 'Current date: ' + new Date().toISOString().split('T')[0] + '\n';
 
@@ -642,7 +680,12 @@ class Orchestrator {
   /**
    * Get conversation history for context
    */
-  getConversationHistory(contextType, contextId, limit = 20) {
+  getConversationHistory(contextType, contextId, limit = null) {
+    // Adaptive context: more for projects, less for simple tasks
+    if (!limit) {
+      limit = contextType === 'project' ? 30 : 15;
+    }
+
     const summaryMsg = this.db.prepare(`
       SELECT role, content FROM messages
       WHERE context_type = ? AND context_id = ? AND is_summary = 1 AND archived = 0

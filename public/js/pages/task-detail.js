@@ -308,20 +308,16 @@ const TaskDetailPage = {
     if (input) input.disabled = true;
 
     try {
-      // The HTTP call still saves the user message and returns the AI message.
-      // But because we added Socket listener, BOTH will be broadcasted and added twice if we aren't careful.
-      // Wait, /api/ai/chat does not broadcast the USER message, only the assistant message via orchestrator?
-      // Actually, orchestrator NOW broadcasts the user message. 
-      // And /api/ai/chat ALSO saves the user message manually (without broadcasting).
-      // So let's just let the socket handle appending. We don't append manually here anymore except the loading state!
       await API.sendAIChat('task', taskId, content);
-      // The socket listener will remove the loading indicator and append the new messages.
     } catch (e) {
       const loading = document.getElementById('ai-loading');
       if (loading) loading.remove();
       Toast.error(e.message);
+    } finally {
       if (input) input.disabled = false;
       if (input) input.focus();
+      const ls = document.getElementById('ai-live-status');
+      if (ls) ls.innerHTML = '';
     }
   },
 

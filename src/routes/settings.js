@@ -48,7 +48,7 @@ router.get('/', (req, res) => {
     ai_router_url: process.env.AI_ROUTER_URL || env.AI_ROUTER_URL || 'http://localhost:20128/v1',
     projects_root: process.env.PROJECTS_ROOT || env.PROJECTS_ROOT || './projects',
     default_model: process.env.DEFAULT_MODEL || env.DEFAULT_MODEL || 'combo',
-    version: '1.0.0'
+    version: '1.4.2'
   });
 });
 

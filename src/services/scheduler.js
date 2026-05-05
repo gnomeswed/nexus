@@ -4,11 +4,17 @@ class Scheduler {
     this.timers = new Map();
     this.db = null;
     this.io = null;
+    this.orchestrator = null;
+    this.heartbeatInterval = null;
   }
 
   init(db, io) {
     this.db = db;
     this.io = io;
+  }
+
+  setOrchestrator(orchestrator) {
+    this.orchestrator = orchestrator;
   }
 
   /**
@@ -38,7 +44,6 @@ class Scheduler {
       this.io.emit('reminder:fire', { id, title, description, agentId, firedAt: new Date().toISOString() });
     }
 
-    // Save as system message
     if (this.db) {
       this.db.prepare(`
         INSERT INTO messages (context_type, context_id, agent_id, role, content)
@@ -62,18 +67,16 @@ class Scheduler {
 
   /**
    * Start the autonomous heartbeat (Ping system)
-   * This wakes up the Manager agent periodically to check for pending tasks
    */
   startHeartbeat(intervalMinutes = 10) {
     console.log(`[Scheduler] Heartbeat started (Every ${intervalMinutes} minutes)`);
     
-    setInterval(async () => {
-      if (!this.db || !this.io) return;
+    this.heartbeatInterval = setInterval(async () => {
+      if (!this.db || !this.io || !this.orchestrator) return;
 
       console.log('[Scheduler] Heartbeat: Checking for pending work...');
       
       try {
-        // Find projects that have pending or in_progress tasks
         const activeProjects = this.db.prepare(`
           SELECT DISTINCT p.id, p.name 
           FROM projects p
@@ -83,11 +86,9 @@ class Scheduler {
         `).all();
 
         for (const project of activeProjects) {
-          const orchestrator = require('./orchestrator');
-          const manager = orchestrator.findContextAgent('project', project.id);
+          const manager = this.orchestrator.findContextAgent('project', project.id);
           
           if (manager) {
-            // Check if there was any message in the last 10 minutes to avoid spamming
             const tenMinutesAgo = new Date(Date.now() - intervalMinutes * 60 * 1000).toISOString();
             const recentMsgs = this.db.prepare(`
               SELECT count(*) as c FROM messages 
@@ -98,8 +99,7 @@ class Scheduler {
             if (recentMsgs.c === 0) {
               console.log(`[Scheduler] Heartbeat: Pinging Manager for project "${project.name}"`);
               
-              // We don't await this to avoid blocking the heartbeat loop
-              orchestrator.processMessage(
+              this.orchestrator.processMessage(
                 'project', 
                 project.id, 
                 `SISTEMA (Heartbeat): Existem tarefas pendentes ou em andamento no Roadmap deste projeto. Verifique o status das tarefas delegadas e pressione os agentes se necessário, ou continue o trabalho você mesmo.`, 
@@ -112,6 +112,19 @@ class Scheduler {
         console.error('[Scheduler] Heartbeat internal error:', err.message);
       }
     }, intervalMinutes * 60 * 1000);
+  }
+
+  stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+      console.log('[Scheduler] Heartbeat stopped');
+    }
+    // Clear all reminders
+    for (const [id, entry] of this.timers) {
+      clearTimeout(entry.timer);
+    }
+    this.timers.clear();
   }
 }
 

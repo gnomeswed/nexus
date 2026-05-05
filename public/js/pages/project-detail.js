@@ -118,20 +118,26 @@ const ProjectDetailPage = {
   },
 
   renderChat(messages, projectId) {
-    const reversed = [...messages].reverse();
     return `
-      <div class="card" style="height:400px;display:flex;flex-direction:column;padding:0;overflow:hidden">
+      <div class="chat-toolbar">
+        <span id="ai-live-status"></span>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-secondary btn-sm" onclick="API.exportChat('project',${projectId})">📤 Exportar</button>
+          <button class="btn btn-danger btn-sm" onclick="ProjectDetailPage.clearChat(${projectId})">🗑️ Limpar</button>
+        </div>
+      </div>
+      <div class="card" style="height:calc(100vh - 340px);min-height:400px;display:flex;flex-direction:column;padding:0;overflow:hidden">
         <div class="chat-messages" id="chat-messages">
-          ${reversed.length === 0 ? '<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-muted)">Inicie a conversa com seus agentes</div>' : ''}
-          ${reversed.map(m => `
+          ${messages.length === 0 ? '<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-muted)">Inicie a conversa com seus agentes</div>' : ''}
+          ${messages.map(m => `
             <div class="chat-bubble ${m.role}">
               <div class="sender">${m.role === 'user' ? '👤 Você' : (m.agent_emoji || '🤖') + ' ' + (m.agent_name || 'Sistema')}</div>
-              ${m.content}
+              ${formatMarkdown(escapeHtml(m.content))}
             </div>
           `).join('')}
         </div>
         <div class="chat-input-area">
-          <input type="text" id="chat-input" placeholder="Digite sua mensagem..." onkeydown="if(event.key==='Enter')ProjectDetailPage.sendChat(${projectId})">
+          <input type="text" id="chat-input" placeholder="Digite sua mensagem... (Ctrl+/)" onkeydown="if(event.key==='Enter')ProjectDetailPage.sendChat(${projectId})">
           <button onclick="ProjectDetailPage.sendChat(${projectId})">➤</button>
         </div>
       </div>
@@ -154,57 +160,42 @@ const ProjectDetailPage = {
     App.refresh();
   },
 
+  async clearChat(projectId) {
+    Modal.confirm('Limpar Chat', 'Deseja apagar todo o histórico de chat deste projeto?', async () => {
+      try {
+        await API.deleteChat('project', projectId);
+        Toast.success('Chat limpo!');
+        App.refresh();
+      } catch(e) { Toast.error(e.message); }
+    });
+  },
+
   async sendChat(projectId) {
     const input = document.getElementById('chat-input');
     const content = input.value.trim();
     if (!content) return;
     input.value = '';
 
-    // Add user message to UI immediately
-    const chatArea = document.getElementById('chat-messages');
-    if (chatArea) {
-      chatArea.innerHTML += `<div class="chat-bubble user"><div class="sender">👤 Você</div>${this.escapeHtml(content)}</div>`;
-      chatArea.innerHTML += `<div class="chat-bubble assistant" id="ai-loading" style="opacity:0.6"><div class="sender">🤖 Pensando...</div><span class="typing-dots">● ● ●</span></div>`;
-      chatArea.scrollTop = chatArea.scrollHeight;
-    }
+    // Show typing indicator
+    const liveStatus = document.getElementById('ai-live-status');
+    if (liveStatus) liveStatus.innerHTML = '<span class="typing-dots" style="color:var(--accent)">● ● ●</span> Processando...';
 
-    // Disable input while processing
     const sendBtn = input?.nextElementSibling;
     if (input) input.disabled = true;
     if (sendBtn) sendBtn.disabled = true;
 
     try {
-      const result = await API.sendAIChat('project', projectId, content);
-
-      // Remove loading indicator
-      const loading = document.getElementById('ai-loading');
-      if (loading) loading.remove();
-
-      if (result.error) {
-        Toast.error(result.error);
-      } else if (result.message) {
-        // Show AI response
-        if (chatArea) {
-          let actionsHtml = '';
-          if (result.actions && result.actions.length > 0) {
-            actionsHtml = '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted)">';
-            result.actions.forEach(a => {
-              actionsHtml += `<div>🔧 ${a.tool}(${Object.values(a.args).map(v => typeof v === 'string' && v.length > 30 ? v.slice(0,30)+'...' : v).join(', ')}) → ${a.result.success ? '✅' : '❌'}</div>`;
-            });
-            actionsHtml += '</div>';
-          }
-          chatArea.innerHTML += `<div class="chat-bubble assistant"><div class="sender">${result.message.agent_emoji || '🤖'} ${result.message.agent_name || 'Agente'}</div>${this.formatMarkdown(result.message.content)}${actionsHtml}</div>`;
-          chatArea.scrollTop = chatArea.scrollHeight;
-        }
-      }
+      await API.sendAIChat('project', projectId, content);
+      // Socket will broadcast the messages, just refresh
+      setTimeout(() => App.refresh(), 500);
     } catch (e) {
-      const loading = document.getElementById('ai-loading');
-      if (loading) loading.remove();
       Toast.error('Erro: ' + e.message);
     } finally {
       if (input) input.disabled = false;
       if (sendBtn) sendBtn.disabled = false;
       if (input) input.focus();
+      const ls = document.getElementById('ai-live-status');
+      if (ls) ls.innerHTML = '';
     }
   },
 
@@ -266,7 +257,39 @@ const ProjectDetailPage = {
     } catch (e) { Toast.error(e.message); }
   },
 
-  editProject(id) { /* TODO: edit modal */ Toast.info('Em breve'); },
+  editProject(id) {
+    API.getProject(id).then(project => {
+      Modal.show(`
+        <div class="modal-header"><h2>✏️ Editar Projeto</h2><button class="modal-close" onclick="Modal.close()">×</button></div>
+        <div class="modal-body">
+          <div class="form-group"><label class="form-label">Nome</label><input class="form-input" id="edit-proj-name" value="${escapeHtml(project.name)}"></div>
+          <div class="form-group"><label class="form-label">Descrição</label><textarea class="form-textarea" id="edit-proj-desc" rows="3">${escapeHtml(project.description || '')}</textarea></div>
+          <div class="form-group"><label class="form-label">Status</label>
+            <select class="form-select" id="edit-proj-status">
+              ${['planning','in_progress','review','completed','archived'].map(s => `<option value="${s}" ${project.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="Modal.close()">Cancelar</button>
+          <button class="btn btn-primary" onclick="ProjectDetailPage.saveEdit(${id})">Salvar</button>
+        </div>
+      `);
+    });
+  },
+
+  async saveEdit(id) {
+    try {
+      await API.updateProject(id, {
+        name: document.getElementById('edit-proj-name').value.trim(),
+        description: document.getElementById('edit-proj-desc').value,
+        status: document.getElementById('edit-proj-status').value
+      });
+      Modal.close();
+      Toast.success('Projeto atualizado!');
+      App.refresh();
+    } catch(e) { Toast.error(e.message); }
+  },
 
   deleteProject(id) {
     Modal.confirm('Deletar Projeto', 'Tem certeza? Tarefas e mensagens serão deletadas.', async () => {
@@ -274,11 +297,3 @@ const ProjectDetailPage = {
     });
   }
 };
-
-function formatBytes(bytes) {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
