@@ -38,8 +38,85 @@ const SettingsPage = {
             <button class="btn btn-primary" onclick="SettingsPage.saveSettings()">Salvar Configurações</button>
           </div>
         </div>
+
+        <div class="card" style="margin-top: 24px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h3 style="font-size:15px">🏥 Saúde da IA (Falhas de Modelos)</h3>
+            <button class="btn btn-danger btn-sm" onclick="SettingsPage.clearFailures()">🗑️ Limpar Logs</button>
+          </div>
+          
+          <div id="ai-health-dashboard">
+            <div style="text-align:center;padding:20px;color:var(--text-muted)">Carregando dados de saúde...</div>
+          </div>
+        </div>
       </div>
     `;
+  },
+
+  async afterRender() {
+    try {
+      const { stats, recent } = await API.getAIFailures();
+      const container = document.getElementById('ai-health-dashboard');
+      if (!container) return;
+
+      if (stats.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--success)">✅ Nenhum erro registrado. Seus modelos estão operando normalmente.</div>';
+        return;
+      }
+
+      let html = `
+        <div style="margin-bottom:20px">
+          <label class="form-label" style="font-size:12px;opacity:0.8">Frequência de Erros por Modelo</label>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+            ${stats.map(s => `
+              <div style="display:flex;align-items:center;gap:12px;background:var(--bg-light);padding:8px 12px;border-radius:8px">
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:600;font-family:'JetBrains Mono', monospace">${s.model}</div>
+                  <div style="font-size:11px;color:var(--text-muted)">Última falha: ${new Date(s.last_failure).toLocaleString()}</div>
+                </div>
+                <div style="font-size:18px;font-weight:700;color:var(--accent-danger)">${s.count}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <label class="form-label" style="font-size:12px;opacity:0.8">Falhas Recentes (Últimas 20)</label>
+        <div style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-top:8px">
+          <table class="table" style="font-size:12px">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Agente</th>
+                <th>Modelo</th>
+                <th>Erro</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${recent.map(f => `
+                <tr>
+                  <td style="white-space:nowrap">${new Date(f.created_at).toLocaleString()}</td>
+                  <td style="white-space:nowrap">${f.agent_emoji || '🤖'} ${f.agent_name || 'Desconhecido'}</td>
+                  <td style="font-family:'JetBrains Mono', monospace;color:var(--accent)">${f.model}</td>
+                  <td style="color:var(--accent-danger);max-width:300px;overflow:hidden;text-overflow:ellipsis">${escapeHtml(f.error_message)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+      container.innerHTML = html;
+    } catch (e) {
+      console.error(e);
+    }
+  },
+
+  async clearFailures() {
+    if (!confirm('Tem certeza que deseja limpar todos os registros de falhas?')) return;
+    try {
+      await API.clearAIFailures();
+      Toast.success('Logs de falhas limpos!');
+      this.afterRender();
+    } catch (e) { Toast.error(e.message); }
   },
 
   async testConnection() {

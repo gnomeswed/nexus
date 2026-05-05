@@ -62,7 +62,7 @@ class AIClient {
       }
     }
 
-      try {
+    try {
       const response = await fetch(`${targetEndpoint}/chat/completions`, {
         method: 'POST',
         headers: {
@@ -77,20 +77,24 @@ class AIClient {
 
       if (!response.ok) {
         const errText = await response.text();
-        throw new Error(`AI API error ${response.status}: ${errText}`);
+        throw new Error(`AI API error ${response.status} using model ${body.model}: ${errText}`);
       }
 
       const data = await response.json();
       return {
         content: data.choices?.[0]?.message?.content || '',
         tool_calls: data.choices?.[0]?.message?.tool_calls || null,
-        model: data.model,
+        model: data.model || body.model, // Use returned model or what we requested
         usage: data.usage,
         finish_reason: data.choices?.[0]?.finish_reason
       };
     } catch (error) {
       if (error.name === 'TimeoutError') {
-        throw new Error('AI request timed out after 3 minutes');
+        throw new Error(`AI request timed out after 3 minutes using model ${body.model}`);
+      }
+      // Re-throw with model info if not already there
+      if (!error.message.includes(body.model)) {
+        error.message = `${error.message} (Model: ${body.model})`;
       }
       throw error;
     }
@@ -244,15 +248,31 @@ class AIClient {
         type: 'function',
         function: {
           name: 'delegate_task',
-          description: 'Create a task and immediately assign it to a specific sub-agent (Worker).',
+          description: 'Create a NEW independent task and assign it to a sub-agent. Use this only for work that is separate from your current task.',
           parameters: {
             type: 'object',
             properties: {
               title: { type: 'string', description: 'Task title' },
-              description: { type: 'string', description: 'Task description and specific instructions for the worker' },
+              description: { type: 'string', description: 'Task description and specific instructions' },
               agent_id: { type: 'integer', description: 'ID of the agent to assign the task to' }
             },
             required: ['title', 'description', 'agent_id']
+          }
+        }
+      });
+
+      tools.push({
+        type: 'function',
+        function: {
+          name: 'assign_agent',
+          description: 'Bring a collaborator into the CURRENT task. Use this when you need help from another specialist (like a DEV or Designer) on what you are doing now.',
+          parameters: {
+            type: 'object',
+            properties: {
+              agent_id: { type: 'integer', description: 'ID of the agent to bring into this task' },
+              reason: { type: 'string', description: 'Why are you calling this agent? What should they do?' }
+            },
+            required: ['agent_id', 'reason']
           }
         }
       });

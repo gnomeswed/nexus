@@ -274,6 +274,16 @@ class Orchestrator {
       };
     } catch (error) {
       const errorAgentId = typeof agent !== 'undefined' && agent ? agent.id : null;
+      
+      // Log failure specifically to ai_failures table
+      try {
+        const modelMatch = error.message.match(/model ([\w\/\.\-]+)/i) || error.message.match(/Model: ([\w\/\.\-]+)/i);
+        const modelName = modelMatch ? modelMatch[1] : 'unknown';
+        this.db.prepare('INSERT INTO ai_failures (agent_id, context_type, context_id, model, error_message) VALUES (?, ?, ?, ?, ?)').run(
+          errorAgentId, contextType, contextId, modelName, error.message
+        );
+      } catch (e) { console.error('[Failure Log Error]', e.message); }
+
       const errMsg = this.saveMessage(contextType, contextId, errorAgentId, 'system', `❌ Error: ${error.message}`, {});
 
       if (this.io) {
@@ -337,6 +347,8 @@ class Orchestrator {
       case 'delegate_task': {
         if (!permissions.delegate_tasks) return { error: 'Permission denied: delegate_tasks. Este agente não tem permissão para delegar tarefas. Faça o trabalho usando create_file/edit_file.' };
         
+        if (args.agent_id === agent.id) return { error: 'Você não pode delegar uma tarefa para si mesmo. Se você quer ajuda nesta tarefa, use assign_agent. Se quer fazer você mesmo, basta usar as ferramentas de arquivo.' };
+
         const projectId = contextType === 'project' ? contextId : (contextType === 'task' ? this.db.prepare('SELECT project_id FROM tasks WHERE id = ?').get(contextId)?.project_id : null);
         
         // Verify if agent_id exists
@@ -355,10 +367,40 @@ class Orchestrator {
         // Auto-trigger the worker agent immediately
         setTimeout(() => {
           console.log(`[Orchestrator] Auto-triggering delegated agent ${args.agent_id} for task ${taskId}`);
-          this.processMessage('task', taskId, `Você recebeu uma nova tarefa delegada por ${agent.name}. Analise a descrição, mude o status para 'in_progress' e comece o trabalho. Use as ferramentas create_file/edit_file diretamente. NÃO delegue para outros agentes. Quando finalizar, avise que terminou alterando o status para 'review_pending'.`, args.agent_id).catch(console.error);
+          this.processMessage('task', taskId, `Olá ${targetAgent.name}! Você recebeu uma nova tarefa delegada por ${agent.name}. \n\nOBJETIVO: ${args.title}\nDETALHES: ${args.description}\n\nPor favor, mude o status para 'in_progress' e comece o trabalho. Quando finalizar, avise alterando o status para 'review_pending'.`, args.agent_id).catch(console.error);
         }, 1500);
 
         return { success: true, task_id: taskId, message: `Tarefa delegada com sucesso para ${targetAgent.name} (ID: ${args.agent_id}): ${args.title}` };
+      }
+
+      case 'assign_agent': {
+        if (!permissions.delegate_tasks) return { error: 'Permission denied. Apenas agentes com permissão de liderança podem chamar colaboradores.' };
+        if (contextType !== 'task') return { error: 'Esta ferramenta só pode ser usada dentro de uma tarefa.' };
+        
+        if (args.agent_id === agent.id) return { error: 'Você já está nesta tarefa.' };
+
+        const targetAgent = this.db.prepare('SELECT id, name FROM agents WHERE id = ?').get(args.agent_id);
+        if (!targetAgent) return { error: `Agent ID ${args.agent_id} not found.` };
+
+        // Add to task_agents table (for multiple agents support)
+        try {
+          this.db.prepare('INSERT OR IGNORE INTO task_agents (task_id, agent_id) VALUES (?, ?)').run(contextId, args.agent_id);
+        } catch (e) { /* ignore uniqueness errors */ }
+
+        // Notify in chat
+        const notification = `SISTEMA: ${agent.name} chamou ${targetAgent.name} para colaborar nesta tarefa.\n\nMOTIVO: ${args.reason}`;
+        this.saveMessage('task', contextId, null, 'system', notification);
+        
+        if (this.io) {
+          this.io.to(`task:${contextId}`).emit('chat:message', { role: 'system', content: notification, created_at: new Date().toISOString() });
+        }
+
+        // Trigger the new agent
+        setTimeout(() => {
+          this.processMessage('task', contextId, `Olá ${targetAgent.name}, ${agent.name} te chamou para ajudar nesta tarefa. \n\nMOTIVO: ${args.reason}\n\nAnalise o histórico acima e colabore conforme necessário.`, args.agent_id).catch(console.error);
+        }, 1500);
+
+        return { success: true, message: `${targetAgent.name} foi adicionado à tarefa.` };
       }
 
       case 'create_agent': {

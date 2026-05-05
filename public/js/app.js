@@ -148,6 +148,12 @@ const App = {
     }
 
     container.innerHTML = html;
+    
+    // Lifecycle: call afterRender if exists
+    const pageObj = this.getPageObject(hash);
+    if (pageObj && pageObj.afterRender) {
+      pageObj.afterRender();
+    }
 
     // UX: Restore scroll if it was captured, otherwise go to bottom
     const newChatEl = document.getElementById('task-chat-messages') || document.getElementById('chat-messages');
@@ -159,6 +165,19 @@ const App = {
     // Close mobile sidebar on nav
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('sidebar-overlay').classList.remove('active');
+  },
+
+  getPageObject(hash) {
+    if (hash === '/' || hash === '') return DashboardPage;
+    if (hash === '/agents') return AgentsPage;
+    if (hash.match(/^\/agents\/\d+$/)) return AgentDetailPage;
+    if (hash === '/projects') return ProjectsPage;
+    if (hash.match(/^\/projects\/\d+$/)) return ProjectDetailPage;
+    if (hash === '/tasks') return TasksPage;
+    if (hash.match(/^\/tasks\/\d+$/)) return TaskDetailPage;
+    if (hash === '/reviews') return ReviewsPage;
+    if (hash === '/settings') return SettingsPage;
+    return null;
   },
 
   navigate(path) { window.location.hash = path; },

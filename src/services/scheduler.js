@@ -108,6 +108,36 @@ class Scheduler {
             }
           }
         }
+
+        // NEW: Check for independent tasks (Tareas Avulsas)
+        const activeTasks = this.db.prepare(`
+          SELECT id, title, agent_id FROM tasks 
+          WHERE status = 'in_progress' 
+          AND project_id IS NULL
+        `).all();
+
+        for (const task of activeTasks) {
+          const tenMinutesAgo = new Date(Date.now() - intervalMinutes * 60 * 1000).toISOString();
+          const recentMsgs = this.db.prepare(`
+            SELECT count(*) as c FROM messages 
+            WHERE context_type = 'task' AND context_id = ? 
+            AND created_at > ?
+          `).get(task.id, tenMinutesAgo);
+
+          if (recentMsgs.c === 0) {
+            console.log(`[Scheduler] Heartbeat: Pinging Agent for task "${task.title}"`);
+            const agentId = task.agent_id || this.orchestrator.findContextAgent('task', task.id)?.id;
+            
+            if (agentId) {
+              this.orchestrator.processMessage(
+                'task',
+                task.id,
+                `SISTEMA (Heartbeat): Esta tarefa avulsa está 'em andamento' mas não teve atividade nos últimos ${intervalMinutes} minutos. Se você teve um erro de timeout, por favor, verifique onde parou e retome o trabalho. Se já terminou, atualize o status para 'review_pending'.`,
+                agentId
+              ).catch(err => console.error(`[Scheduler] Heartbeat error for task ${task.id}:`, err.message));
+            }
+          }
+        }
       } catch (err) {
         console.error('[Scheduler] Heartbeat internal error:', err.message);
       }

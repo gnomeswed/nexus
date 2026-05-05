@@ -51,6 +51,8 @@ Travas de segurança implementadas em nível de **código backend** (não depend
 | `delegate_task` | Requer permissão `delegate_tasks` no agente |
 | `add_subtask` | Requer permissão `create_tasks` no agente |
 | `create_task` / `delegate_task` dentro de Task | **Hard-blocked por código** — convertido automaticamente em subtask |
+| **Acesso ao Painel** | Protegido por **PIN de Segurança** (configurável via UI/Env) |
+| **Persistência de PIN** | Armazenado apenas em `sessionStorage` (expira ao fechar a aba) |
 
 ---
 
@@ -163,6 +165,7 @@ pm2 start server.js --name "nexus-os"
 | `DEFAULT_MODEL` | Nome da rota/combo no 9Router | `combo` |
 | `DEFAULT_API_KEY` | Chave de autenticação para o 9Router | `nexus-os` |
 | `DB_PATH` | Caminho do banco SQLite | `./data/nexus.db` |
+| `NEXUS_PIN` | PIN de segurança para acesso ao painel | `1234` |
 
 Todas as variáveis são editáveis pela interface em **Configurações**.
 
@@ -309,8 +312,11 @@ Base URL: `http://localhost:3000/api`
 7. Trabalhador muda status para review_pending
 8. Sistema notifica o Gerente automaticamente
 9. Gerente usa read_file para revisar o trabalho
-10. Se aprovado → Humano digita "aprovado" → Gerente muda para completed
-11. Se precisa ajuste → Gerente cria add_subtask com instruções → muda para in_progress
+10. Se aprovado → Humano digita "aprovado" (ou clica em **Aprovar**) → Gerente muda para completed
+11. Se precisa ajuste → Humano/Gerente clica em **Ajustes** → Sistema notifica o agente e muda para in_progress
+
+### Aprovação em Massa (Review Panel)
+Na aba de **Aprovações**, o sistema permite revisar todas as tarefas em `review_pending` de uma só vez. O processamento é feito em paralelo, e o sistema notifica cada agente individualmente sobre a conclusão bem-sucedida ou falha do processo.
 ```
 
 ---

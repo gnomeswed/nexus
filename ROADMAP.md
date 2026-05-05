@@ -3,7 +3,7 @@
 Documento de acompanhamento da evolução, refatorações e próximos passos do Nexus OS.
 
 ## 📌 Status Atual
-- **Versão:** 1.4.1
+- **Versão:** 1.4.2
 - **Stack:** Node.js, Express, SQLite, Vanilla JS/CSS (Glassmorphism).
 - **Integração IA:** Proxy centralizado via **9Router** (`localhost:20128/v1`).
 - **Modelos testados e funcionando:** `nvidia/minimaxai/minimax-m2.7`, `nvidia/z-ai/glm4.7`
@@ -64,12 +64,21 @@ Documento de acompanhamento da evolução, refatorações e próximos passos do 
 - [x] **Feature (Memória):** Memória de Longo Prazo — Nova tabela `memories` e ferramentas `save_memory`/`search_memory` para os agentes aprenderem com projetos passados.
 - [x] **Hotfix (Critical):** Corrigido erro de sintaxe (redeclaração de variável) no `orchestrator.js` que causava crash na inicialização.
 
+### v1.4.x — Segurança, UX & Refinamento (05/05/2026)
+- [x] **🛡️ Hardening de Segurança:** Migração do PIN de `localStorage` para `sessionStorage` (Stateless) e auditoria global contra XSS (`escapeHtml` em todas as renderizações dinâmicas).
+- [x] **🔐 PIN pela UI:** Configuração do PIN de acesso agora pode ser feita diretamente na tela de Configurações, salvando no `.env` automaticamente.
+- [x] **🚀 Feedback de Orquestração:** Aprovação de tarefas agora envia notificação automática ao chat do agente, evitando loops de espera.
+- [x] **❌ Fluxo de Rejeição:** Botão de "Ajustes/Negar" agora comunica o feedback ao agente via chat, garantindo que ele saiba o que corrigir.
+- [x] **📦 Aprovação em Massa:** Refatorado `approveAll()` para processamento paralelo robusto com feedback de sucessos/falhas individual.
+- [x] **⚡ Performance UI:** Implementada preservação de scroll no chat e troca de abas instantânea no detalhe do projeto (sem refresh de página).
+- [x] **✨ UX Refinada:** Input de chat limpa e recupera foco automaticamente; feedback visual de "PIN INCORRETO" com bordas de alerta.
+- [x] **🧹 Limpeza de Código:** Remoção de helpers redundantes e unificação de lógicas de formatação globais.
+
 ---
 
 ## 🎯 Próximos Passos (Backlog)
 
 ### Sprint Atual
-- **Autenticação básica:** Proteger o painel com PIN ou JWT simples para acesso externo seguro.
 - **Lembretes UI:** Adicionar modal na interface para criar/editar tarefas programadas (Reminders).
 - **Fallback de modelo:** Se o modelo configurado retornar erro 4xx, tentar automaticamente o próximo disponível na lista do 9Router.
 

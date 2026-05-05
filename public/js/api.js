@@ -94,6 +94,8 @@ const API = {
   getSettings() { return this.request('GET', '/settings'); },
   updateSettings(data) { return this.request('POST', '/settings', data); },
   testSettings() { return this.request('POST', '/settings/test'); },
+  getAIFailures() { return this.request('GET', '/settings/failures'); },
+  clearAIFailures() { return this.request('POST', '/settings/failures/clear'); },
 
   // Search
   search(query) { return this.request('GET', `/search?q=${encodeURIComponent(query)}`); },

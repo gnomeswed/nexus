@@ -113,4 +113,37 @@ router.post('/test', async (req, res) => {
   }
 });
 
+router.get('/failures', (req, res) => {
+  try {
+    const db = req.app.locals.db;
+    const stats = db.prepare(`
+      SELECT model, count(*) as count, max(created_at) as last_failure 
+      FROM ai_failures 
+      GROUP BY model 
+      ORDER BY count DESC
+    `).all();
+    
+    const recent = db.prepare(`
+      SELECT f.*, a.name as agent_name, a.avatar_emoji as agent_emoji
+      FROM ai_failures f
+      LEFT JOIN agents a ON f.agent_id = a.id
+      ORDER BY f.created_at DESC LIMIT 20
+    `).all();
+    
+    res.json({ stats, recent });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/failures/clear', (req, res) => {
+  try {
+    const db = req.app.locals.db;
+    db.prepare('DELETE FROM ai_failures').run();
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

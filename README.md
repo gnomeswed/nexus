@@ -1,6 +1,6 @@
 <div align="center">
   <img src="https://img.shields.io/badge/Status-Active-success.svg" alt="Status" />
-  <img src="https://img.shields.io/badge/Version-1.4.1-blue.svg" alt="Version" />
+  <img src="https://img.shields.io/badge/Version-1.4.2-blue.svg" alt="Version" />
   <img src="https://img.shields.io/badge/Node.js-Ready-green.svg" alt="Node" />
   <h1>🚀 Nexus OS</h1>
   <p>Orquestrador autônomo de agentes de IA, rodando localmente ou em VPS com suporte a 9Router e Ollama.</p>
@@ -16,6 +16,7 @@ O Nexus OS é um sistema focado em criar, gerenciar e delegar tarefas para múlt
 - **🗺️ Bento Roadmap UI:** Tela de tarefas modernizada com TreeView em tempo real e barra de progresso visual de subtarefas.
 - **🔌 Multi-Provider Nativo:** Configure agentes individualmente para rodarem via 9Router (Global) ou diretamente no Ollama (Local/Gratuito).
 - **📡 WebSockets Refinados:** Atualizações em tempo real livres de duplicações, com fallbacks automáticos para alucinações de LLMs locais.
+- **🔐 Segurança Hardened (v1.4.x):** Proteção contra XSS em todas as renderizações, armazenamento de PIN em sessão e configuração de acesso diretamente via UI.
 
 ---
 
@@ -55,6 +56,9 @@ AI_ROUTER_URL=http://localhost:20128/v1
 
 # Modelo padrão. Deixe "combo" para usar o rodízio do 9Router!
 DEFAULT_MODEL=combo
+
+# PIN de segurança para acesso ao painel (Recomendado)
+NEXUS_PIN=1234
 
 PROJECTS_ROOT=./projects
 DB_PATH=./data/nexus.db
