@@ -1190,3 +1190,19 @@ html, body {
   .form-row { grid-template-columns: 1fr; }
   .grid-2, .dashboard-grid { grid-template-columns: 1fr; }
 }
+
+ / *   A p p r o v a l   A c t i o n s   &   B a r   * / 
+ . a p p r o v a l - a c t i o n s   b u t t o n   { 
+     t r a n s i t i o n :   a l l   0 . 2 s   e a s e ; 
+     f o n t - w e i g h t :   5 0 0 ; 
+     c u r s o r :   p o i n t e r ; 
+ } 
+ . a p p r o v a l - a c t i o n s   b u t t o n : h o v e r   { 
+     t r a n s f o r m :   t r a n s l a t e Y ( - 1 p x ) ; 
+     f i l t e r :   b r i g h t n e s s ( 1 . 1 ) ; 
+ } 
+ # a p p r o v a l - b a r - c o n t a i n e r   { 
+     z - i n d e x :   1 0 ; 
+ } 
+  
+ 

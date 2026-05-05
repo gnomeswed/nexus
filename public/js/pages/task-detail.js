@@ -90,7 +90,7 @@ const TaskDetailPage = {
                 ${initialStatus}
               </div>
             </div>
-            <div class="card" style="height:400px;display:flex;flex-direction:column;padding:0;overflow:hidden">
+            <div class="card" style="height:500px;display:flex;flex-direction:column;padding:0;overflow:hidden">
               <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:15px;font-weight:600">💬 Chat da Tarefa</div>
               <div class="chat-messages" id="task-chat-messages">
                 ${messages.length === 0 ? '<div class="empty-state-text" style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px">Converse com o agente responsável</div>' : ''}
@@ -103,6 +103,14 @@ const TaskDetailPage = {
                         actionsHtml = '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted)">';
                         meta.actions.forEach(a => { actionsHtml += `<div>🔧 ${a.tool} → ${a.result.success ? '✅' : '❌'}</div>`; });
                         actionsHtml += '</div>';
+                      }
+                      if (meta.requires_approval) {
+                         actionsHtml += `
+                            <div class="approval-actions" style="margin-top:12px;display:flex;gap:8px">
+                              <button class="btn btn-sm" style="background:var(--accent-success);color:white;padding:4px 12px;font-size:12px" onclick="TaskDetailPage.approveAction('${meta.action}', ${meta.task_id || id}, ${JSON.stringify(meta.args || {}).replace(/"/g, '&quot;')})">✅ Aprovar</button>
+                              <button class="btn btn-sm btn-danger" style="padding:4px 12px;font-size:12px" onclick="TaskDetailPage.rejectAction()">❌ Negar</button>
+                            </div>
+                         `;
                       }
                     } catch(e) {}
                   }
@@ -118,6 +126,17 @@ const TaskDetailPage = {
                   `;
                 }).join('')}
               </div>
+              <div id="approval-bar-container">
+                ${task.status === 'review_pending' ? `
+                  <div style="background:var(--bg-lighter);border-top:2px solid var(--accent-success);padding:12px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+                    <div style="font-size:13px;font-weight:600">🚀 Tarefa aguardando sua aprovação final!</div>
+                    <div style="display:flex;gap:8px">
+                      <button class="btn btn-secondary btn-sm" onclick="ReviewsPage.reject(${id})">❌ Ajustes</button>
+                      <button class="btn btn-sm" style="background:var(--accent-success);color:white" onclick="ReviewsPage.approve(${id})">✅ Aprovar</button>
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
               <div class="chat-input-area">
                 <input type="text" id="task-chat-input" placeholder="Mensagem..." onkeydown="if(event.key==='Enter')TaskDetailPage.sendChat(${id})">
                 <button onclick="TaskDetailPage.sendChat(${id})">➤</button>
@@ -130,12 +149,11 @@ const TaskDetailPage = {
   },
 
   setupSocket(taskId) {
-    Socket.joinRoom('task', taskId);
     Socket.off('chat:message');
     Socket.on('chat:message', (msg) => {
       const chatArea = document.getElementById('task-chat-messages');
       if (!chatArea) return;
-      
+
       const emptyState = chatArea.querySelector('.empty-state-text');
       if (emptyState) emptyState.remove();
 
@@ -153,6 +171,14 @@ const TaskDetailPage = {
             meta.actions.forEach(a => { actionsHtml += `<div>🔧 ${a.tool} → ${a.result.success ? '✅' : '❌'}</div>`; });
             actionsHtml += '</div>';
           }
+          if (meta.requires_approval) {
+             actionsHtml += `
+                <div class="approval-actions" style="margin-top:12px;display:flex;gap:8px">
+                  <button class="btn btn-sm" style="background:var(--accent-success);color:white;padding:4px 12px;font-size:12px" onclick="TaskDetailPage.approveAction('${meta.action}', ${meta.task_id || taskId}, ${JSON.stringify(meta.args || {}).replace(/"/g, '&quot;')})">✅ Aprovar</button>
+                  <button class="btn btn-sm btn-danger" style="padding:4px 12px;font-size:12px" onclick="TaskDetailPage.rejectAction()">❌ Negar</button>
+                </div>
+             `;
+          }
         } catch(e) {}
       }
 
@@ -169,6 +195,24 @@ const TaskDetailPage = {
       `;
       chatArea.appendChild(newMsg);
       chatArea.scrollTop = chatArea.scrollHeight;
+
+      // Update approval bar if needed
+      const container = document.getElementById('approval-bar-container');
+      if (container && msg.role === 'assistant') {
+         API.getTask(taskId).then(t => {
+            if (t.status === 'review_pending') {
+               container.innerHTML = `
+                  <div style="background:var(--bg-lighter);border-top:2px solid var(--accent-success);padding:12px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+                    <div style="font-size:13px;font-weight:600">🚀 Tarefa aguardando sua aprovação final!</div>
+                    <div style="display:flex;gap:8px">
+                      <button class="btn btn-secondary btn-sm" onclick="ReviewsPage.reject(${taskId})">❌ Ajustes</button>
+                      <button class="btn btn-sm" style="background:var(--accent-success);color:white" onclick="ReviewsPage.approve(${taskId})">✅ Aprovar</button>
+                    </div>
+                  </div>
+               `;
+            }
+         });
+      }
     });
 
     Socket.off('agent:thinking');
@@ -181,7 +225,11 @@ const TaskDetailPage = {
   },
 
   async updateStatus(id, status) {
-    try { await API.updateTask(id, { status }); Toast.success('Status atualizado'); } catch (e) { Toast.error(e.message); }
+    try { 
+      await API.updateTask(id, { status }); 
+      Toast.success('Status atualizado'); 
+      if (status === 'completed' || status === 'review_pending') App.refresh();
+    } catch (e) { Toast.error(e.message); }
   },
 
   async editTask(id) {
@@ -266,53 +314,30 @@ const TaskDetailPage = {
     } catch (e) { Toast.error(e.message); }
   },
 
-  async toggleCheck(taskId, idx, checked) {
+  async toggleCheck(taskId, index, done) {
     try {
       const task = await API.getTask(taskId);
-      const checklist = JSON.parse(task.checklist || '[]');
-      if (checklist[idx]) { checklist[idx].done = checked; await API.updateTask(taskId, { checklist }); App.refresh(); }
-    } catch (e) { Toast.error(e.message); }
+      let checklist = JSON.parse(task.checklist || '[]');
+      checklist[index].done = done;
+      await API.updateTask(taskId, { checklist: JSON.stringify(checklist) });
+      App.refresh();
+    } catch(e) { Toast.error(e.message); }
   },
 
   async addSubtask(taskId) {
     const input = document.getElementById('new-subtask-input');
     const text = input.value.trim();
     if (!text) return;
-    input.disabled = true;
-
     try {
+      await API.sendMessage('task', taskId, { role: 'system', content: `SUBTASK: ${text}`, metadata: JSON.stringify({ action: 'add_subtask', args: { text } }) });
+      // Actually we have a tool for this in orchestrator, but for manual entry:
       const task = await API.getTask(taskId);
-      let checklist = [];
-      try {
-        checklist = JSON.parse(task.checklist || '[]');
-        if (!Array.isArray(checklist)) checklist = [];
-      } catch (e) {
-        checklist = [];
-      }
-      
-      const pad = (n) => n.toString().padStart(2, '0');
-      const now = new Date();
-      const timestamp = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-      
-      checklist.push({ 
-        text, 
-        done: false,
-        created_by: '👤 Humano',
-        created_at: timestamp
-      });
-      await API.updateTask(taskId, { checklist });
-      Toast.success('Subtask adicionada!');
-      App.refresh(); 
-    } catch (e) { 
-      console.error('Error adding subtask:', e);
-      Toast.error(e.message); 
-    } finally { 
-      if (input) { 
-        input.disabled = false; 
-        input.value = ''; 
-        setTimeout(() => input.focus(), 10);
-      } 
-    }
+      let checklist = JSON.parse(task.checklist || '[]');
+      checklist.push({ text, done: false, created_by: '👤 Você' });
+      await API.updateTask(taskId, { checklist: JSON.stringify(checklist) });
+      input.value = '';
+      App.refresh();
+    } catch(e) { Toast.error(e.message); }
   },
 
   async sendChat(taskId) {
@@ -334,8 +359,6 @@ const TaskDetailPage = {
     try {
       await API.sendAIChat('task', taskId, content);
     } catch (e) {
-      const loading = document.getElementById('ai-loading');
-      if (loading) loading.remove();
       Toast.error(e.message);
     } finally {
       if (input) input.disabled = false;
@@ -345,11 +368,26 @@ const TaskDetailPage = {
     }
   },
 
+  async approveAction(action, contextId, args) {
+    try {
+      if (action === 'complete_task') {
+        await API.updateTask(contextId, { status: 'completed' });
+        await API.sendAIChat('task', contextId, "SISTEMA: O usuário aprovou a conclusão da tarefa via botão.");
+      } else if (action === 'create_agent') {
+        await API.sendAIChat('task', contextId, `Aprovado! Prossiga com a criação do agente "${args.name}" conforme solicitado.`);
+      }
+      Toast.success('Ação autorizada!');
+      App.refresh();
+    } catch(e) { Toast.error(e.message); }
+  },
+
+  async rejectAction() {
+    Toast.info('Ação não autorizada. O agente continuará aguardando.');
+  },
+
   escapeHtml(text) {
     if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    return text.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
   },
 
   deleteTask(id) {

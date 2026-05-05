@@ -363,10 +363,16 @@ class Orchestrator {
 
       case 'create_agent': {
         // Enforce Human-in-the-Loop Protocol
+        const lastUserMsgs = this.db.prepare("SELECT content FROM messages WHERE context_type = ? AND context_id = ? AND role = 'user' ORDER BY created_at DESC LIMIT 5").all(contextType, contextId);
         const approvalKeywords = ['aprovado', 'aprovo', 'faça', 'faca', 'pode ir', 'ok', 'liberado', 'go ahead', 'confirmado', 'sim', 'autorizado'];
         const isApproved = lastUserMsgs.some(m => approvalKeywords.some(kw => m.content.toLowerCase().includes(kw)));
         if (!isApproved) {
-          return { error: '❌ AÇÃO BLOQUEADA PELO SISTEMA: Você não pode criar agentes até que o usuário humano digite a palavra "aprovado" (ou "faça") no chat. Peça permissão primeiro!' };
+          return { 
+            error: '❌ AÇÃO BLOQUEADA PELO SISTEMA: Requer aprovação humana para criar novos agentes.',
+            requires_approval: true,
+            action: 'create_agent',
+            args: args
+          };
         }
 
         const result = this.db.prepare(`
@@ -388,10 +394,16 @@ class Orchestrator {
 
           if (!isLowRisk) {
             // Enforce Human-in-the-Loop Protocol for completion of high-risk tasks
+            const lastUserMsgs = this.db.prepare("SELECT content FROM messages WHERE context_type = ? AND context_id = ? AND role = 'user' ORDER BY created_at DESC LIMIT 5").all(contextType, contextId);
             const approvalKeywords = ['aprovado', 'aprovo', 'faça', 'faca', 'pode ir', 'ok', 'liberado', 'go ahead', 'confirmado', 'sim', 'yes', 'pode', 'autorizado'];
             const isApproved = lastUserMsgs.some(m => approvalKeywords.some(kw => m.content.toLowerCase().includes(kw)));
             if (!isApproved) {
-              return { error: '❌ AÇÃO BLOQUEADA PELO SISTEMA: Esta tarefa é estratégica (Código/Arquivos/Delegação). Você não pode finalizá-la até que o usuário humano digite a palavra "aprovado" (ou "faça", "ok") no chat para confirmar seu trabalho final.' };
+              return { 
+                error: '❌ AÇÃO BLOQUEADA PELO SISTEMA: Esta tarefa é estratégica. Requer aprovação humana para finalizar.',
+                requires_approval: true,
+                action: 'complete_task',
+                task_id: targetTaskId
+              };
             }
           }
         }
