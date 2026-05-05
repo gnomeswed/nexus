@@ -66,6 +66,36 @@ const ProjectDetailPage = {
     }
   },
 
+  setupSocket(projectId) {
+    Socket.on('chat:message', (msg) => {
+      if (msg.context_type === 'project' && msg.context_id == projectId) {
+        // If we are in the chat tab, we could append or just refresh the tab
+        if (this.currentTab === 'chat') {
+            this.refreshChat(projectId);
+        }
+      }
+    });
+  },
+
+  async refreshChat(projectId) {
+    try {
+      const project = await API.getProject(projectId);
+      const container = document.getElementById('chat-messages');
+      if (container) {
+        container.innerHTML = project.messages.map(m => `
+          <div class="chat-bubble ${m.role}">
+            <div class="sender">
+              <span>${m.role === 'user' ? '👤 Você' : (m.agent_emoji || '🤖') + ' ' + (m.agent_name || 'Sistema')}</span>
+              <span class="chat-time">${formatTime(m.created_at)}</span>
+            </div>
+            ${formatMarkdown(escapeHtml(m.content))}
+          </div>
+        `).join('');
+        container.scrollTop = container.scrollHeight;
+      }
+    } catch(e) { console.error(e); }
+  },
+
   renderRoadmap(roadmap, projectId) {
     if (!roadmap.length) return `
       <div class="empty-state">
@@ -158,21 +188,36 @@ const ProjectDetailPage = {
     `).join('');
   },
 
-  switchTab(tab, id) {
+  switchTab(tab, projectId) {
     this.currentTab = tab;
-    // Fast tab switching without full App.refresh()
-    const container = document.getElementById('tab-content');
-    if (!container) return App.refresh();
-
-    // Active tab class update
+    // Fast UI update
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    const activeTab = document.querySelector(`.tab[onclick*="'${tab}'"]`);
-    if (activeTab) activeTab.classList.add('active');
-
-    // Re-render only the tab content
-    this.render(id).then(html => {
-        // This is a shortcut to get fresh data, but we could also just call renderTab if we had data cached
-        App.refresh(); 
+    const clickedTab = event.currentTarget;
+    if (clickedTab) clickedTab.classList.add('active');
+    
+    // We still need the data to render the tab, so we fetch the project
+    // but we only update the #tab-content area
+    API.getProject(projectId).then(project => {
+        const roadmap = JSON.parse(project.roadmap || '[]');
+        const container = document.getElementById('tab-content');
+        if (container) {
+            container.innerHTML = this.renderTab(tab, { 
+                roadmap, 
+                tasks: project.tasks, 
+                messages: project.messages, 
+                files: project.files, 
+                id: project.id 
+            });
+            // Auto-scroll chat if that was the tab
+            if (tab === 'chat') {
+                const cm = document.getElementById('chat-messages');
+                if (cm) cm.scrollTop = cm.scrollHeight;
+                this.setupSocket(projectId);
+            }
+        }
+    }).catch(e => {
+        Toast.error(e.message);
+        App.refresh();
     });
   },
 

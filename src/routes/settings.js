@@ -48,12 +48,13 @@ router.get('/', (req, res) => {
     ai_router_url: process.env.AI_ROUTER_URL || env.AI_ROUTER_URL || 'http://localhost:20128/v1',
     projects_root: process.env.PROJECTS_ROOT || env.PROJECTS_ROOT || './projects',
     default_model: process.env.DEFAULT_MODEL || env.DEFAULT_MODEL || 'combo',
+    nexus_pin: process.env.NEXUS_PIN || env.NEXUS_PIN || '1234',
     version: '1.4.2'
   });
 });
 
 router.post('/', (req, res) => {
-  const { ai_router_url, projects_root, default_model } = req.body;
+  const { ai_router_url, projects_root, default_model, nexus_pin } = req.body;
 
   const updates = {};
   if (ai_router_url) {
@@ -68,6 +69,10 @@ router.post('/', (req, res) => {
   if (default_model) {
     updates.DEFAULT_MODEL = default_model;
     process.env.DEFAULT_MODEL = default_model;
+  }
+  if (nexus_pin) {
+    updates.NEXUS_PIN = nexus_pin;
+    process.env.NEXUS_PIN = nexus_pin;
   }
   if (Object.keys(updates).length > 0) writeEnv(updates);
 

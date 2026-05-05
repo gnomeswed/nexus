@@ -64,13 +64,14 @@ const App = {
     } catch(e) { Toast.error(e.message); }
   },
 
-  showPinScreen() {
+  showPinScreen(error = false) {
     Modal.show(`
       <div class="modal-header" style="justify-content:center"><h2>🔐 Acesso Restrito</h2></div>
       <div class="modal-body" style="text-align:center">
         <p style="margin-bottom:20px;color:var(--text-secondary)">Nexus OS está protegido por um PIN de segurança.</p>
         <div class="form-group" style="max-width:200px;margin:0 auto">
-          <input type="password" id="nexus-pin-input" class="form-input" placeholder="Digite o PIN" style="text-align:center;font-size:24px;letter-spacing:6px" autofocus>
+          <input type="password" id="nexus-pin-input" class="form-input" placeholder="${error ? 'PIN INCORRETO' : 'Digite o PIN'}" style="text-align:center;font-size:24px;letter-spacing:6px;${error ? 'border-color:var(--accent-danger)' : ''}" autofocus>
+          ${error ? '<div style="color:var(--accent-danger);font-size:12px;margin-top:8px">PIN incorreto. Tente novamente.</div>' : ''}
         </div>
       </div>
       <div class="modal-footer" style="justify-content:center">

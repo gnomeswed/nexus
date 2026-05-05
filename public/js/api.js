@@ -18,10 +18,11 @@ const API = {
     try {
       const res = await fetch(this.base + path, opts);
       if (res.status === 401) {
+        const isWrong = !!sessionStorage.getItem('nexus_pin');
         if (!window._nexus_pin_prompting) {
           window._nexus_pin_prompting = true;
           if (typeof App !== 'undefined' && App.showPinScreen) {
-            App.showPinScreen();
+            App.showPinScreen(isWrong);
           }
         }
         throw new Error('PIN Required');

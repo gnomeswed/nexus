@@ -26,6 +26,13 @@ const SettingsPage = {
               Deixe "combo" para usar o rodízio grátis do 9Router, ou digite um modelo específico (ex: kr/claude-sonnet-4.5)
             </small>
           </div>
+          <div class="form-group">
+            <label class="form-label">PIN de Segurança (Acesso ao Sistema)</label>
+            <input type="password" class="form-input" id="setting-pin" value="${settings.nexus_pin || ''}" placeholder="Ex: 1234">
+            <small style="color:var(--text-muted);font-size:12px;margin-top:4px;display:block">
+              Este PIN será solicitado sempre que você abrir o sistema em uma nova sessão.
+            </small>
+          </div>
           <div style="margin-top: 16px; display: flex; gap: 8px;">
             <button class="btn btn-secondary" onclick="SettingsPage.testConnection()">🔌 Testar Conexão</button>
             <button class="btn btn-primary" onclick="SettingsPage.saveSettings()">Salvar Configurações</button>
@@ -49,10 +56,16 @@ const SettingsPage = {
     const ai_router_url = document.getElementById('setting-router').value.trim();
     const projects_root = document.getElementById('setting-projects').value.trim();
     const default_model = document.getElementById('setting-model').value.trim();
+    const nexus_pin = document.getElementById('setting-pin').value.trim();
+    
+    if (!nexus_pin) return Toast.error('O PIN não pode ser vazio');
 
     try {
-      await API.updateSettings({ ai_router_url, projects_root, default_model });
+      await API.updateSettings({ ai_router_url, projects_root, default_model, nexus_pin });
       Toast.success('Configurações atualizadas com sucesso!');
+      // Update local storage/session if changed? 
+      // Better to let the next request 401 and re-prompt or just update session
+      sessionStorage.setItem('nexus_pin', nexus_pin);
     } catch (e) {
       Toast.error('Erro ao atualizar: ' + e.message);
     }

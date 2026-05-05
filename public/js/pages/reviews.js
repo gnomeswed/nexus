@@ -152,7 +152,12 @@ const ReviewsPage = {
         }));
         
         const successCount = results.filter(r => r.status === 'fulfilled').length;
-        Toast.success(`${successCount} tarefa(s) aprovada(s)!`);
+        const failCount = results.length - successCount;
+        if (failCount > 0) {
+          Toast.warning(`${successCount} aprovadas, ${failCount} falharam.`);
+        } else {
+          Toast.success(`${successCount} tarefa(s) aprovada(s)!`);
+        }
         App.refresh();
       } catch(e) { Toast.error(e.message); }
     });
