@@ -59,6 +59,36 @@ const App = {
     } catch(e) { Toast.error(e.message); }
   },
 
+  showPinScreen() {
+    Modal.show(`
+      <div class="modal-header" style="justify-content:center"><h2>🔐 Acesso Restrito</h2></div>
+      <div class="modal-body" style="text-align:center">
+        <p style="margin-bottom:20px;color:var(--text-secondary)">Nexus OS está protegido por um PIN de segurança.</p>
+        <div class="form-group" style="max-width:200px;margin:0 auto">
+          <input type="password" id="nexus-pin-input" class="form-input" placeholder="Digite o PIN" style="text-align:center;font-size:24px;letter-spacing:6px" autofocus>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content:center">
+        <button class="btn btn-primary" style="width:100%" onclick="App.verifyPin()">Entrar</button>
+      </div>
+    `, { closeable: false });
+    
+    setTimeout(() => document.getElementById('nexus-pin-input')?.focus(), 100);
+    document.getElementById('nexus-pin-input')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') this.verifyPin();
+    });
+  },
+
+  verifyPin() {
+    const input = document.getElementById('nexus-pin-input');
+    const pin = input?.value;
+    if (!pin) return;
+    localStorage.setItem('nexus_pin', pin);
+    window._nexus_pin_prompting = false;
+    // Test the PIN by refreshing
+    this.refresh();
+  },
+
   async route() {
     const hash = window.location.hash.slice(1) || '/';
     const container = document.getElementById('page-container');

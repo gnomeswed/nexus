@@ -5,14 +5,36 @@ const API = {
   _cacheTTL: 30000, // 30 seconds
 
   async request(method, path, body = null) {
-    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    const pin = localStorage.getItem('nexus_pin');
+    const opts = { 
+      method, 
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-nexus-pin': pin || ''
+      } 
+    };
     if (body) opts.body = JSON.stringify(body);
-    const res = await fetch(this.base + path, opts);
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(err.error || 'Request failed');
+    
+    try {
+      const res = await fetch(this.base + path, opts);
+      if (res.status === 401) {
+        if (!window._nexus_pin_prompting) {
+          window._nexus_pin_prompting = true;
+          if (typeof App !== 'undefined' && App.showPinScreen) {
+            App.showPinScreen();
+          }
+        }
+        throw new Error('PIN Required');
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || 'Request failed');
+      }
+      return res.json();
+    } catch (e) {
+      if (e.message === 'PIN Required') throw e;
+      throw e;
     }
-    return res.json();
   },
 
   async cached(key, fetcher) {

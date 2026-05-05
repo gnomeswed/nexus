@@ -1,13 +1,22 @@
 // Modal system
 const Modal = {
-  show(content) {
+  _options: {},
+
+  show(content, options = {}) {
+    this._options = options;
     const overlay = document.getElementById('modal-overlay');
     const container = document.getElementById('modal-content');
     container.innerHTML = content;
     overlay.classList.add('active');
+    
+    // Hide close buttons if not closeable
+    if (options.closeable === false) {
+      container.querySelectorAll('.modal-close').forEach(b => b.style.display = 'none');
+    }
   },
 
   close() {
+    if (this._options.closeable === false) return;
     const overlay = document.getElementById('modal-overlay');
     overlay.classList.remove('active');
   },
@@ -27,8 +36,9 @@ const Modal = {
       </div>
     `);
     document.getElementById('modal-confirm-btn').onclick = () => {
-      Modal.close();
       onConfirm();
+      const overlay = document.getElementById('modal-overlay');
+      overlay.classList.remove('active');
     };
   }
 };

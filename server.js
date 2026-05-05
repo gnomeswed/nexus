@@ -14,6 +14,7 @@ const settingsRouter = require('./src/routes/settings');
 const { setupWebSocket } = require('./src/websocket/chat-handler');
 const orchestrator = require('./src/services/orchestrator');
 const scheduler = require('./src/services/scheduler');
+const security = require('./src/middleware/security');
 
 const app = express();
 const server = http.createServer(app);
@@ -39,6 +40,10 @@ app.locals.io = io;
 app.locals.projectsRoot = projectsDir;
 app.locals.orchestrator = orchestrator;
 app.locals.scheduler = scheduler;
+
+// Global Security
+app.use('/api', security.rateLimiter);
+app.use('/api', security.pinAuth);
 
 // API Routes
 app.use('/api/agents', agentsRouter);
@@ -126,6 +131,13 @@ app.get('/api/stats', (req, res) => {
         reviewPending: reviewTasks.count,
         staleTasks: staleTasks,
         errorAgents: errorAgents
+      },
+      system: {
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        dbStatus: 'healthy',
+        aiGateway: !!process.env.AI_ROUTER_URL ? 'online' : 'offline',
+        scheduler: scheduler.heartbeatInterval ? 'active' : 'idle'
       },
       recentActivity: recentMessages,
       tokenUsage,

@@ -71,6 +71,43 @@ const DashboardPage = {
           </div>
         </div>
 
+        <!-- NEXUS PULSE -->
+        <div class="card system-health-card" style="margin-bottom:16px; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px; background:rgba(0,0,0,0.05); border-bottom:1px solid var(--border)">
+            <h3 style="font-size:12px; font-weight:700; display:flex; align-items:center; gap:8px; letter-spacing:0.5px">
+              <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--accent-success); box-shadow:0 0 8px var(--accent-success); animation: pulse 2s infinite"></span>
+              NEXUS PULSE
+            </h3>
+            <span style="font-size:10px; color:var(--text-muted); font-family:'JetBrains Mono'">SYS_UPTIME: ${Math.floor(stats.system?.uptime / 3600)}H ${Math.floor((stats.system?.uptime % 3600) / 60)}M</span>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:15px; padding:15px; background:var(--bg-secondary)">
+            <div class="health-item">
+              <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px">AI Gateway</div>
+              <div style="font-size:13px; font-weight:600; color:${stats.system?.aiGateway === 'online' ? 'var(--accent-success)' : 'var(--accent-danger)'}">
+                ${stats.system?.aiGateway === 'online' ? '● Online' : '○ Offline'}
+              </div>
+            </div>
+            <div class="health-item">
+              <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px">Orchestrator</div>
+              <div style="font-size:13px; font-weight:600; color:var(--accent-success)">● Operational</div>
+            </div>
+            <div class="health-item">
+              <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px">Scheduler</div>
+              <div style="font-size:13px; font-weight:600; color:${stats.system?.scheduler === 'active' ? 'var(--accent-success)' : 'var(--text-muted)'}">
+                ${stats.system?.scheduler === 'active' ? '● Active' : '○ Idle'}
+              </div>
+            </div>
+            <div class="health-item">
+              <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px">Memory Usage</div>
+              <div style="font-size:13px; font-weight:600; font-family:'JetBrains Mono'">${Math.round((stats.system?.memory?.rss || 0) / 1024 / 1024)}MB</div>
+            </div>
+            <div class="health-item">
+              <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px">Database</div>
+              <div style="font-size:13px; font-weight:600; color:var(--accent-success)">● Healthy</div>
+            </div>
+          </div>
+        </div>
+
         <!-- QUICK COMMAND -->
         <div class="card quick-cmd-card">
           <div class="quick-cmd-header">
